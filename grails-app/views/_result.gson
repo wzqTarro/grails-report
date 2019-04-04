@@ -1,0 +1,15 @@
+import com.report.enst.ResultEnum
+
+model {
+    Integer code = ResultEnum.SUCCESS.getCode()
+    String message = ResultEnum.SUCCESS.getMessage()
+    String errorCode
+    Integer errcode
+}
+
+json{
+    code code
+    message message
+    errorCode errorCode
+    errcode errcode
+}

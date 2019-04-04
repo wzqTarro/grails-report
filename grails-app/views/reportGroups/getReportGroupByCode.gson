@@ -1,0 +1,13 @@
+import com.zcareze.report.ReportGroups
+
+inherits template:'/result', model:[code: code, message: message]
+
+model {
+    ReportGroups reportGroups
+    Integer code
+    String message
+}
+
+json{
+    one g.render(reportGroups)
+}

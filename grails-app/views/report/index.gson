@@ -1,0 +1,12 @@
+import com.zcareze.report.Report
+import grails.gorm.PagedResultList
+
+inherits template:"/result"
+
+model{
+    PagedResultList reportList
+}
+
+json{
+    list tmpl.report(reportList.resultList ?: [])
+}

@@ -1,0 +1,65 @@
+import com.zcareze.report.Report
+import com.report.enst.ResultEnum
+import com.zcareze.report.ReportGrantTo
+import com.zcareze.report.ReportInputs
+import com.zcareze.report.ReportOpenTo
+import com.zcareze.report.ReportStyle
+import com.zcareze.report.ReportTables
+
+model{
+    Report report
+}
+
+json{
+    id report.id
+    name report.name
+    grpCode report.grpCode
+    comment report.comment
+    runway report.runway
+    editTime report.editTime
+    editorId report.editorId
+    editorName report.editorName
+    inputList report.inputList, { ReportInputs input ->
+        name input.name
+        caption input.caption
+        seqNum input.seqNum
+        dataType input.dataType
+        inputType input.inputType
+        optionList input.optionList
+        sqlText input.sqlText
+        defValue input.defValue
+        defType input.defType
+    }
+    tableList report.tableList, { ReportTables table ->
+        name table.name
+        sqlText table.sqlText
+        seqNum table.seqNum
+    }
+    styleList report.styleList, { ReportStyle style ->
+        scene style.scene
+        fileUrl style.fileUrl
+        chart style.chart
+        comment style.comment
+    }
+    openToList report.openToList, { ReportOpenTo openTo ->
+        id openTo.id
+        orgTreeId openTo.orgTreeId
+        orgTreeLayer openTo.orgTreeLayer
+        roles openTo.roles
+        granter openTo.granter
+        grantTime openTo.grantTime
+    }
+    grantToList report.grantToList, { ReportGrantTo grantTo ->
+        /** 组织ID **/
+        orgId grantTo.orgId
+        /** 授予角色 **/
+        roles grantTo.roles
+        /** 管理权 **/
+        manage grantTo.manage
+        /** 授权者 **/
+        granter grantTo.granter
+        /** 授权时间 **/
+        grantTime grantTo.grantTime
+    }
+
+}
