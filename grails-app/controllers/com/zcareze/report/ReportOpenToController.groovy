@@ -1,98 +1,27 @@
 package com.zcareze.report
 
-import com.report.Staff
+
 import com.report.result.BaseResult
 import com.report.result.Result
+import com.report.service.IOrgListService
 import com.report.vo.ReportOpenToVO
 import grails.converters.JSON
-import grails.validation.ValidationException
+import org.grails.web.json.JSONObject
+
 import static org.springframework.http.HttpStatus.*
 
 class ReportOpenToController {
 
     ReportOpenToService reportOpenToService
 
+    IOrgListService orgListService
+
+    String staffId = "1"
+    String staffName = "王"
+
     def grailsDomainClassMappingContext
 
     static allowedMethods = [save: "POST", update: "PUT", delete: "DELETE"]
-
-    def index(Integer max) {
-        params.max = Math.min(max ?: 10, 100)
-        respond reportOpenToService.list(params), model:[reportOpenToCount: reportOpenToService.count()]
-    }
-
-    def show(Long id) {
-        respond reportOpenToService.get(id)
-    }
-
-    def create() {
-        respond new ReportOpenTo(params)
-    }
-
-    def save(ReportOpenTo reportOpenTo) {
-        if (reportOpenTo == null) {
-            notFound()
-            return
-        }
-
-        try {
-            reportOpenToService.save(reportOpenTo)
-        } catch (ValidationException e) {
-            respond reportOpenTo.errors, view:'create'
-            return
-        }
-
-        request.withFormat {
-            form multipartForm {
-                flash.message = message(code: 'default.created.message', args: [message(code: 'reportOpenTo.label', default: 'ReportOpenTo'), reportOpenTo.id])
-                redirect reportOpenTo
-            }
-            '*' { respond reportOpenTo, [status: CREATED] }
-        }
-    }
-
-    def edit(Long id) {
-        respond reportOpenToService.get(id)
-    }
-
-    def update(ReportOpenTo reportOpenTo) {
-        if (reportOpenTo == null) {
-            notFound()
-            return
-        }
-
-        try {
-            reportOpenToService.save(reportOpenTo)
-        } catch (ValidationException e) {
-            respond reportOpenTo.errors, view:'edit'
-            return
-        }
-
-        request.withFormat {
-            form multipartForm {
-                flash.message = message(code: 'default.updated.message', args: [message(code: 'reportOpenTo.label', default: 'ReportOpenTo'), reportOpenTo.id])
-                redirect reportOpenTo
-            }
-            '*'{ respond reportOpenTo, [status: OK] }
-        }
-    }
-
-    def delete(Long id) {
-        if (id == null) {
-            notFound()
-            return
-        }
-
-        reportOpenToService.delete(id)
-
-        request.withFormat {
-            form multipartForm {
-                flash.message = message(code: 'default.deleted.message', args: [message(code: 'reportOpenTo.label', default: 'ReportOpenTo'), id])
-                redirect action:"index", method:"GET"
-            }
-            '*'{ render status: NO_CONTENT }
-        }
-    }
 
     /**
      * 保存开放记录
@@ -101,7 +30,7 @@ class ReportOpenToController {
     def saveReportOpenTo(ReportOpenTo reportOpenTo) {
         if (reportOpenTo) {
             // 参数校验
-            if (reportOpenTo.hasErrors()) {
+            if (!reportOpenTo.validate()) {
                 String errorMessage = hasError(reportOpenTo)
                 render Result.error(errorMessage) as JSON
                 return
@@ -110,6 +39,11 @@ class ReportOpenToController {
             // 组织树
             if (!reportOpenTo.orgTreeId) {
                 reportOpenTo.orgTreeId = null
+                Integer orgTreeLayer = reportOpenTo.orgTreeLayer
+                if (!orgTreeLayer || orgTreeLayer <= 0) {
+                    render Result.error("未指定组织，只能从第1级开始授权") as JSON
+                    return
+                }
             }
 
             // 外键校验
@@ -121,9 +55,7 @@ class ReportOpenToController {
                 render Result.error("报表不存在") as JSON
                 return
             }
-
-            Staff staff = new Staff()
-            reportOpenTo.granter = staff.staffName
+            reportOpenTo.granter = staffName
 
             reportOpenTo.save(flush: true)
             render Result.success() as JSON
@@ -157,26 +89,82 @@ class ReportOpenToController {
      */
     def getReportOpenToList(String rptId) {
         BaseResult<ReportOpenToVO> result = new BaseResult<>()
+        if (!rptId) {
+            result.error = "报表标识不能为空"
+            render result as JSON
+            return
+        }
         List<ReportOpenToVO> reportOpenToVOList = new ArrayList<>()
-        ReportOpenTo.createCriteria().list {
+        List<ReportOpenTo> list = ReportOpenTo.createCriteria().list {
             rpt {
                 eq("id", rptId)
             }
-        }.each { openTo ->
+        }
+        if (!list) {
+            result.list = reportOpenToVOList
+            render result as JSON
+            return
+        }
+        Set<String> orgIdSet = new HashSet<>()
+        list.each { openTo ->
+            def orgTreeId = openTo.orgTreeId
+            if (orgTreeId) {
+                orgIdSet.add(openTo.orgTreeId)
+            }
+        }
+        /**
+         * TODO 组织机构树形菜单
+         */
+        def param = [isUpOrDown: true, list: orgIdSet]
+        JSONObject parentOrgListJSONObj = orgListService.getOrgTreeList((param as JSON) as String)
+        if (parentOrgListJSONObj.get("errcode") != 0) {
+            result.error = "组织机构名称获取失败"
+            render result as JSON
+            return
+        }
+        Map<String, List<Map<String, Object>>> parentOrgListMap = parentOrgListJSONObj.get("map")
+        list.each { openTo ->
             ReportOpenToVO reportOpenToVO = new ReportOpenToVO()
-            reportOpenToVO.accessOpenToProperties(grailsDomainClassMappingContext, openTo)
+            bindData(reportOpenToVO, openTo)
 
             reportOpenToVO.rptId = openTo.rpt.id
             reportOpenToVO.id = openTo.id
 
-            /**
-             * TODO 组织机构树形菜单
-             */
-            reportOpenToVO.orgTreeName = ""
+            // 组织树名称
+            String orgTreeName = ""
+            def orgTreeId = openTo.orgTreeId
+            if (orgTreeId) {
+                List<Map<String, Object>> parentOrgList = parentOrgListMap.get(orgTreeId)
+                orgTreeName = generateOrgTreeName(parentOrgList)
+            }
+
+            reportOpenToVO.orgTreeName = orgTreeName
             reportOpenToVOList.add(reportOpenToVO)
         }
         result.list = reportOpenToVOList
         render result as JSON
+    }
+
+    /**
+     * 生成树形名称
+     * @param nameList
+     * @return
+     */
+    private String generateOrgTreeName(List<Map<String, Object>> orgMapList) {
+        String orgName = ""
+        if (orgMapList) {
+            // 组成树形菜单 上级组织名称>下级组织名称>下下级组织名称
+            for (int i = 0; i < orgMapList.size(); i++) {
+                Map<String, Object> org = orgMapList.get(i)
+                String name = org.get("orgName")
+                if (i == (orgMapList.size() - 1)) {
+                    orgName = orgName + name
+                } else {
+                    orgName = orgName + name + ">"
+                }
+            }
+        }
+        return orgName
     }
     protected void notFound() {
         request.withFormat {

@@ -1,0 +1,37 @@
+---
+- hosts: tomcatServer
+  vars:
+    - warName: StatisticsReports-0.1.war
+    - warRemotePath: /var/lib/jenkins/workspace/StatisticsReports/build/libs
+    - deployPath: /opt/tomcat/latest/webapps/ROOT/
+
+  tasks:
+    #- name: Download WAR to server
+    #  synchronize: src={{ warLocalPath }}/{{ warName }} dest={{ warRemotePath }}/{{ warName }}
+    #  notify:
+    #    - Stop tomcat
+
+    - name: Clean artifact path
+      file:
+        state: absent
+        path: "{{ deployPath }}/"
+
+    - name: Create artifact path
+      file:
+        state: directory
+        path: "{{ deployPath }}/"
+
+    - name: Unzip WAR file
+      unarchive: src={{ warRemotePath }}/{{ warName }} dest={{ deployPath }} copy=no mode=0755 owner=tomcat group=tomcat
+      notify:
+        - Restart tomcat
+
+    - name: Delete remote war file
+      file: path={{ warRemotePath }}/{{ warName }} state=absent
+
+  handlers:
+    - name: Stop tomcat
+      service: name=tomcat state=stopped
+
+    - name: Restart tomcat
+      service: name=tomcat state=restarted

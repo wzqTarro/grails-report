@@ -1,7 +1,6 @@
 package statreports
 
-import com.zcareze.report.ReportInputsController
-
+@SuppressWarnings(['UnnecessaryGString'])
 class UrlMappings {
 
     static mappings = {

@@ -14,7 +14,8 @@ class ReportStyle implements Serializable{
     String comment
     static belongsTo = [rpt: Report]
     static constraints = {
-        scene(unique: 'rpt', inList: [0,1,2])
+        scene(unique: 'rpt')
+        scene(inList: [0,1,2,3])
         fileUrl(nullable: false)
         chart(nullable: true)
         comment(nullable: true)

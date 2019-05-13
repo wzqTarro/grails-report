@@ -2,8 +2,10 @@ buildscript {
     repositories {
         mavenLocal()
         maven { url "https://repo.grails.org/grails/core" }
+        maven { url "https://plugins.gradle.org/m2/" }
     }
     dependencies {
+        classpath 'com.bmuschko:gradle-clover-plugin:2.2.2'
         classpath "org.grails:grails-gradle-plugin:$grailsVersion"
         classpath "gradle.plugin.com.energizedwork.webdriver-binaries:webdriver-binaries-gradle-plugin:1.4"
         classpath "org.grails.plugins:hibernate5:${gormVersion-".RELEASE"}"
@@ -23,6 +25,15 @@ apply plugin: "org.grails.plugins.views-json"
 apply plugin:"com.energizedwork.webdriver-binaries"
 apply plugin:"asset-pipeline"
 apply plugin:"org.grails.grails-gsp"
+apply plugin: 'codenarc'
+apply plugin: 'com.bmuschko.clover'
+
+dependencyManagement {
+    imports {
+        mavenBom "org.springframework.cloud:spring-cloud-dependencies:$springCloudVersion"
+    }
+    applyMavenExclusions false
+}
 
 repositories {
     mavenLocal()
@@ -32,9 +43,12 @@ repositories {
 dependencies {
     compile "org.springframework.boot:spring-boot-starter-logging"
     compile "org.springframework.boot:spring-boot-autoconfigure"
-    compile "org.grails:grails-core"
     compile "org.springframework.boot:spring-boot-starter-actuator"
     compile "org.springframework.boot:spring-boot-starter-tomcat"
+    compile "org.springframework.cloud:spring-cloud-starter-openfeign"
+    compile "org.springframework.cloud:spring-cloud-starter-netflix-hystrix"
+    compile "org.springframework.cloud:spring-cloud-starter-netflix-eureka-client"
+    compile "org.grails:grails-core"
     compile "org.grails:grails-web-boot"
     compile "org.grails:grails-logging"
     compile "org.grails:grails-plugin-rest"
@@ -53,21 +67,24 @@ dependencies {
     console "org.grails:grails-console"
     compile "org.grails.plugins:views-json"
     compile "org.grails.plugins:views-json-templates"
+    compile "mysql:mysql-connector-java:5.1.46"
     profile "org.grails.profiles:web"
     runtime "org.glassfish.web:el-impl:2.1.2-b03"
-    runtime "com.h2database:h2"
+    compile "com.h2database:h2"
     runtime "org.apache.tomcat:tomcat-jdbc"
     runtime "com.bertramlabs.plugins:asset-pipeline-grails:2.15.1"
     testCompile "org.grails:grails-gorm-testing-support"
-    testCompile "org.grails.plugins:geb"
     testCompile "org.grails:grails-web-testing-support"
-    testCompile "org.seleniumhq.selenium:selenium-remote-driver:3.6.0"
-    testCompile "org.seleniumhq.selenium:selenium-api:3.6.0"
-    testCompile "org.seleniumhq.selenium:selenium-support:3.6.0"
-    testRuntime "org.seleniumhq.selenium:selenium-htmlunit-driver:2.47.1"
-    testRuntime "net.sourceforge.htmlunit:htmlunit:2.18"
-    testRuntime "org.seleniumhq.selenium:selenium-chrome-driver:3.6.0"
-    testRuntime "org.seleniumhq.selenium:selenium-firefox-driver:3.6.0"
+    testCompile 'au.com.dius:pact-jvm-consumer-groovy_2.11:3.5.20'
+    testCompile "io.github.openfeign:feign-httpclient"
+    testCompile "io.github.openfeign:feign-gson"
+    clover 'org.openclover:clover:4.3.1'
+}
+
+grails { pathingJar = true }//#createprocess error=206
+
+test {
+    systemProperties['pact.rootDir'] = "$buildDir/pacts"
 }
 
 bootRun {
@@ -77,18 +94,31 @@ bootRun {
     systemProperty springProfilesActive, System.getProperty(springProfilesActive)
 }
 
-webdriverBinaries {
-    chromedriver '2.35'
-    geckodriver '0.19.1'
-}
-
-tasks.withType(Test) {
-    systemProperty "geb.env", System.getProperty('geb.env')
-    systemProperty "geb.build.reportsDir", reporting.file("geb/integrationTest")
-}
-
-
 assets {
     minifyJs = true
     minifyCss = true
+}
+
+codenarc {
+    toolVersion = '0.27.0'
+    configFile = file("${rootProject.projectDir}/config/codenarc/rules.groovy")
+    reportFormat = 'html'
+    ignoreFailures = true
+}
+
+clover {
+    licenseLocation = File.createTempFile('clover', '.license').absolutePath
+
+    excludes = ['**/Application.groovy',
+                '**/BootStrap.groovy',
+                '**/UrlMappings.groovy',
+                '**/*GrailsPlugin.groovy',
+                '**/*Mock.groovy',
+    ]
+
+    testIncludes = ['**/*Spec.groovy']
+    report {
+        html = true
+        xml = true
+    }
 }

@@ -6,4 +6,11 @@ class CommonValue {
      */
     public static final String PARAM_PREFIX = "["
     public static final String PARAM_SUFFIX = "]"
+
+    public static final String ORG_GLOBAL = "(全域)"
+    public static final String ORG_NOGRANT = "(未授权)"
+
+    public static final String ORG_JOIN = ">"
 }
+
+

@@ -29,9 +29,9 @@ enum InputDataTypeEnum {
         this.title = title
     }
 
-    static InputDataTypeEnum getEnumByDataType(String name) {
+    static InputDataTypeEnum getEnumByDataType(String dataType) {
         for (InputDataTypeEnum e : values()) {
-            if (e.name == name) {
+            if (e.name == dataType) {
                 return e
             }
         }

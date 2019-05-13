@@ -18,19 +18,6 @@ class ReportTableVO implements Serializable{
     String sqlText
     // 顺序号
     Integer seqNum
-
-    /**
-     * 赋值数据表基础信息
-     * @param grailsDomainClassMappingContext
-     * @param report
-     */
-    void accessTableProperties(MappingContext grailsDomainClassMappingContext, ReportTables reportTables) {
-        PersistentEntity entityClass = grailsDomainClassMappingContext.getPersistentEntity(ReportTables.class.name)
-        List<PersistentProperty> persistentPropertyList = entityClass.persistentProperties
-        persistentPropertyList.each { property ->
-            if (property.name != "rpt" && property.name != "version") {
-                this[property.name] =  reportTables[property.name]
-            }
-        }
-    }
+    // 查询方式
+    Integer queryMode
 }

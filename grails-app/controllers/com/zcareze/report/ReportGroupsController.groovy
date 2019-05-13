@@ -15,92 +15,7 @@ class ReportGroupsController {
 
     ReportGroupsService reportGroupsService
 
-    String index;
-
     static allowedMethods = [save: "POST", update: "PUT", delete: "DELETE"]
-
-    def index(Integer max) {
-        params.max = Math.min(max ?: 10, 100)
-        respond reportGroupsService.list(params), model:[reportGroupsCount: reportGroupsService.count()]
-    }
-
-    def show(Long id) {
-        respond reportGroupsService.get(id)
-    }
-
-    def create() {
-        respond new ReportGroups(params)
-    }
-
-    def save(ReportGroups reportGroups) {
-        //def reportGroupInsntance = new ReportGroups(params)
-        if (reportGroups == null) {
-            notFound()
-            return
-        }
-
-        try {
-            reportGroupsService.save(reportGroups)
-        } catch (ValidationException e) {
-            respond reportGroups.errors, view:'create'
-            return
-        }
-
-        request.withFormat {
-            form multipartForm {
-                flash.message = message(code: 'default.created.message', args: [message(code: 'reportGroups.label', default: 'ReportGroups'), reportGroups.id])
-                redirect reportGroups
-            }
-            '*' { respond reportGroups, [status: CREATED] }
-        }
-    }
-
-    def edit(Long id) {
-        respond reportGroupsService.get(id)
-    }
-
-    def update(ReportGroups reportGroups) {
-        //def reportGroupInsntance = ReportGroups.get(id)
-        //reportGroupInsntance.properties = params
-        if (reportGroups == null) {
-            notFound()
-            return
-        }
-
-        try {
-            reportGroupsService.save(reportGroups)
-        } catch (ValidationException e) {
-            respond reportGroups.errors, view:'edit'
-            return
-        }
-
-        request.withFormat {
-            form multipartForm {
-                flash.message = message(code: 'default.updated.message', args: [message(code: 'reportGroups.label', default: 'ReportGroups'), reportGroups.id])
-                redirect reportGroups
-            }
-            '*'{ respond reportGroups, [status: OK] }
-        }
-    }
-
-    def delete(String code) {
-        if (id == null) {
-            notFound()
-            return
-        }
-
-        //reportGroupsService.delete(id)
-        ReportGroups groups = ReportGroups.findByCode(code)
-        groups.delete()
-
-        request.withFormat {
-            form multipartForm {
-                flash.message = message(code: 'default.deleted.message', args: [message(code: 'reportGroups.label', default: 'ReportGroups'), id])
-                redirect action:"index", method:"GET"
-            }
-            '*'{ render status: NO_CONTENT }
-        }
-    }
 
     /**
      * 添加报表分组
@@ -108,7 +23,7 @@ class ReportGroupsController {
      * @return
      */
     def addReportGroup(ReportGroups reportGroups) {
-        if (reportGroups.hasErrors()) {
+        if (!reportGroups.validate()) {
             def errorMessage = hasError(reportGroups)
             render Result.error(errorMessage) as JSON
             return
@@ -122,6 +37,11 @@ class ReportGroupsController {
      * @return
      */
     def editReportGroup() {
+        def code = params.get("code")
+        if (!code) {
+            render Result.error("编码不能为空") as JSON
+            return
+        }
         ReportGroups reportGroups = ReportGroups.findByCode(params.get("code"));
         if (reportGroups != null) {
             reportGroups.properties = params
@@ -150,9 +70,9 @@ class ReportGroupsController {
                 render Result.success() as JSON
                 return
             }
-            render Result.error("报表分组不存在")
+            render Result.error("报表分组不存在") as JSON
         } else {
-            render Result.error("编码不能为空")
+            render Result.error("编码不能为空") as JSON
         }
     }
     /**
@@ -163,7 +83,12 @@ class ReportGroupsController {
         BaseResult result = new BaseResult<ReportGroups>()
         if (code) {
             ReportGroups reportGroups = ReportGroups.findByCode(code)
-            result.setOne(reportGroups)
+            if (!reportGroups) {
+                result.setError("报表分组不存在")
+                render result as JSON
+                return
+            }
+            result.one = reportGroups
             render result as JSON
         } else {
             result.setError("编码不能为空")
@@ -184,7 +109,12 @@ class ReportGroupsController {
             if (pageStart < 0) {
                 pageStart = 0
             }
-            def list = ReportGroups.list(max: pageSize, offset: pageStart, code: "asc")
+            def list = ReportGroups.createCriteria().list{
+                ne("code", "99")
+                firstResult pageStart
+                maxResults pageSize
+                order("code", "asc")
+            }
             result.setList(list);
         }
         render result as JSON

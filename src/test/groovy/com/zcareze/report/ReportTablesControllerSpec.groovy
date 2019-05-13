@@ -5,6 +5,7 @@ import grails.testing.web.controllers.ControllerUnitTest
 import grails.validation.ValidationException
 import spock.lang.*
 
+@Ignore
 class ReportTablesControllerSpec extends Specification implements ControllerUnitTest<ReportTablesController>, DomainUnitTest<ReportTables> {
 
     def populateValidParams(params) {

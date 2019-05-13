@@ -1,8 +1,10 @@
 package com.zcareze.report.interceptor
 
 import grails.testing.web.interceptor.InterceptorUnitTest
+import spock.lang.Ignore
 import spock.lang.Specification
 
+@Ignore
 class ReportInputsInterceptorSpec extends Specification implements InterceptorUnitTest<ReportInputsInterceptor> {
 
     def setup() {

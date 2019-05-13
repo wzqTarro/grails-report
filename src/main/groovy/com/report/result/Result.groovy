@@ -24,13 +24,13 @@ class Result {
 
     static Result error(String msg) {
         Result result = new Result();
-        result.setCode(ResultEnum.OTHER_ERROR.getCode());
+        result.setCode(ResultEnum.PARAM_ERROR.getCode());
         result.setMessage(msg);
         return result;
     }
 
     void setError(String msg) {
-        this.code = ResultEnum.OTHER_ERROR.getCode()
+        this.code = ResultEnum.PARAM_ERROR.getCode()
         this.message = msg;
     }
 }

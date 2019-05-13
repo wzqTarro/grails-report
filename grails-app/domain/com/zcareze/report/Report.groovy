@@ -1,12 +1,13 @@
 package com.zcareze.report
 
 import com.sun.media.jfxmedia.logging.Logger
+import grails.gorm.MultiTenant
 import grails.gorm.transactions.Transactional
 
 /**
  * 报表目录
  */
-class Report implements Serializable{
+class Report implements Serializable, MultiTenant<Report>{
 
     String id
     /** 编码 **/
@@ -25,23 +26,27 @@ class Report implements Serializable{
     String editorId
     /** 编辑人姓名 **/
     String editorName
+    /** 多租户鉴别字段 **/
+    String cloudId
 
     static hasMany = [inputList: ReportInputs, tableList: ReportTables, styleList: ReportStyle, openToList: ReportOpenTo, grantToList: ReportGrantTo]
 
     static constraints = {
-        code(unique: true)
-        name(unique: true)
+        code(unique: 'cloudId')
+        name(unique: 'cloudId')
         grpCode(nullable: true)
         comment(nullable: true)
         runway(nullable: true, inList: [1, 2])
-        editorId(blank: true)
-        editorName(blank: true)
+        editorId(nullable: true)
+        editorName(nullable: true)
         editTime(nullable: true)
+        cloudId(nullable: true)
     }
 
     static mapping = {
         table "report_list"
 
+        tenantId name: 'cloudId'
         id generator: 'uuid', column: 'id', sqlType: 'char', length: 32
         code column: 'code', length: 5, unique: true
         name column: 'name', length: 30, unique: true
@@ -49,7 +54,6 @@ class Report implements Serializable{
         comment column: 'comment', length: 100
         editorId column: 'editor_id', sqlType: 'char', length: 32
         editorName column: 'editor_name', length: 50
-        lastUpdated column: "editTime"
 
         // 级联操作
         inputList cascade: 'all'

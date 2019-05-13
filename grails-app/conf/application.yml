@@ -1,9 +1,14 @@
 ---
+server:
+    port: 8079
 grails:
     profile: web
     codegen:
         defaultPackage: statreports
     gorm:
+        multiTenancy:
+            mode: DISCRIMINATOR
+            tenantResolverClass: org.grails.datastore.mapping.multitenancy.resolvers.FixedTenantResolver
         reactor:
             # Whether to translate GORM events into Reactor events
             # Disabled by default for performance reasons
@@ -21,12 +26,20 @@ spring:
     groovy:
         template:
             check-template-location: false
+    application:
+        name: report-service
 
 # Spring Actuator Endpoints are Disabled by Default
 endpoints:
     enabled: false
     jmx:
         enabled: true
+
+eureka:
+    client:
+        enabled: true
+        serviceUrl:
+            defaultZone: http://user:password@192.168.1.3:8761/eureka/
 
 ---
 grails:
@@ -101,15 +114,15 @@ environments:
     development:
         dataSource:
             dbCreate: create-drop
-            url: jdbc:h2:./devDb;MVCC=TRUE;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE
+            url: jdbc:h2:mem:devDb;MVCC=TRUE;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE
     test:
         dataSource:
             dbCreate: update
             url: jdbc:h2:mem:testDb;MVCC=TRUE;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE
     production:
         dataSource:
-            dbCreate: none
-            url: jdbc:h2:./prodDb;MVCC=TRUE;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE
+            dbCreate: create-drop
+            url: jdbc:h2:mem:prodDb;MVCC=TRUE;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE
             properties:
                 jmxEnabled: true
                 initialSize: 5
@@ -128,3 +141,34 @@ environments:
                 testOnReturn: false
                 jdbcInterceptors: ConnectionState
                 defaultTransactionIsolation: 2 # TRANSACTION_READ_COMMITTED
+
+---
+environments:
+    test:
+        select:
+            dataSource:
+                url: jdbc:h2:mem:testDb;MVCC=TRUE;LOCK_TIMEOUT=10000;DB_CLOSE_ON_EXIT=FALSE
+                user: sa
+                pwd: ''
+                driverClassName: org.h2.Driver
+    development:
+        select:
+            dataSource:
+                url: jdbc:mysql://rm-bp16c06lj5gooo69a3o.mysql.rds.aliyuncs.com/dev_region?createDatabaseIfNotExist=true&amp;useUnicode=true&amp;characterEncoding=utf-8
+                user: developer_user
+                pwd: Developer_root
+                driverClassName: com.mysql.jdbc.Driver
+    production:
+        select:
+            dataSource:
+                url: jdbc:mysql://rm-bp16c06lj5gooo69a3o.mysql.rds.aliyuncs.com/dev_region?createDatabaseIfNotExist=true&amp;useUnicode=true&amp;characterEncoding=utf-8
+                user: developer_user
+                pwd: Developer_root
+                driverClassName: com.mysql.jdbc.Driver
+
+
+
+
+
+
+

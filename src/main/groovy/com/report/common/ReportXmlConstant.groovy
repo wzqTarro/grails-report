@@ -13,10 +13,14 @@ class ReportXmlConstant {
     public static final String XML_TABLE_NAME="name";
     public static final String XML_TABLE_SEQNUM="seq_num";
     public static final String XML_TABLE_RECORD="record";
+
+    /**
+     * 大屏使用
+     */
     public static final String XML_TABLE_COLUMNS="columns";
     public static final String XML_TABLE_COLUMN="column";
 
 
-    public static final String QUERYINPUT_VALUE="colValue";
-    public static final String QUERYINPUT_TITLE="colTitle";
+    public static final String QUERYINPUT_VALUE="col_value";
+    public static final String QUERYINPUT_TITLE="col_title";
 }

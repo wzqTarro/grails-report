@@ -26,7 +26,7 @@ class CommonUtil {
                 for (int i = 1; i < sqlArray.length; i++) {
                     String param = sqlArray[i]
                     if (sqlArray[i].contains(CommonValue.PARAM_SUFFIX)) {
-                        paramList.add(param[0..param.indexOf(CommonValue.PARAM_SUFFIX)] + CommonValue.PARAM_PREFIX)
+                        paramList.add(CommonValue.PARAM_PREFIX + param[0..param.indexOf(CommonValue.PARAM_SUFFIX)])
                     }
                 }
             }
@@ -34,6 +34,20 @@ class CommonUtil {
         return paramList
     }
 
+    /**
+     * 将包含下划线_的字符串转为驼峰格式
+     * @param str
+     * @return
+     */
+    static String toHumpStr(String str) {
+        if (str && str.contains("_")) {
+            String s = str[str.indexOf("_") + 1]
+            String upperStr = str[str.indexOf("_") + 1].toUpperCase()
+            str = str.replace("_" + s, upperStr)
+            return str
+        }
+        return str
+    }
     /**
      * 获取系统参数的值
      * @param paramName
@@ -57,7 +71,7 @@ class CommonUtil {
                     break;
                 case CURRENT_ORG :
                     paramValue.setTitle("显示的机构名称");
-                    paramValue.setValue("机构的标识");
+                    paramValue.setValue("ef325711521b11e6bbd8d017c2939671");
                     break;
                 case CURRENT_TEAM :
                     paramValue.setTitle("显示的团队名称");
@@ -65,17 +79,10 @@ class CommonUtil {
                     break;
                 case CURRENT_USER :
                     paramValue.setTitle("显示的职员名称");
-                    paramValue.setValue("职员的标识");
+                    paramValue.setValue("b1dcc74abedc4899a259e96d2c6f18dc");
                     break;
             }
         }
-    }
-
-    public static void main(String[] args) {
-        def now  = new Date().toCalendar()
-     now.add(Calendar.YEAR, 1)
-             println now.getTime()
-
     }
 
     /**
@@ -99,8 +106,8 @@ class CommonUtil {
                     /**
                      * TODO
                      */
-                    paramValue.setTitle("我的机构的名称");
-                    paramValue.setValue("我的机构的值");
+                    paramValue.setTitle("my_org_name");
+                    paramValue.setValue("ef325711521b11e6bbd8d017c2939671");
                     break;
                 case DEPAMENT_ALL :
                     paramValue.setTitle("所有科室");

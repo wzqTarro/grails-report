@@ -2,11 +2,13 @@ package com.zcareze.report
 
 import grails.testing.mixin.integration.Integration
 import grails.gorm.transactions.Rollback
+import spock.lang.Ignore
 import spock.lang.Specification
 import org.hibernate.SessionFactory
 
 @Integration
 @Rollback
+@Ignore
 class ReportUsuallyServiceSpec extends Specification {
 
     ReportUsuallyService reportUsuallyService

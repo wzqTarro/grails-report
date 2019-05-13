@@ -27,6 +27,8 @@ class ReportGrantToVO implements Serializable{
         persistentPropertyList.each { property ->
             if (property.name != "rpt" && property.name != "version" && property.name != "grantTime" && property.name != "granter") {
                 this[property.name] =  reportGrantTo[property.name]
+            } else if (property.name == "rpt"){
+                this.rptId = reportGrantTo.rpt.id
             }
         }
     }
