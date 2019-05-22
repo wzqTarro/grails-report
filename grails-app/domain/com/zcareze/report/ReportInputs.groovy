@@ -22,7 +22,7 @@ class ReportInputs implements Serializable{
     String defValue
     /** 默认值类型 **/
     String defType
-    static belongsTo = [rpt: Report]
+    static belongsTo = [rpt: Report, dataSource: ReportDatasource]
     static constraints = {
         name(unique: 'rpt')
         rpt(nullable: false)
@@ -33,6 +33,7 @@ class ReportInputs implements Serializable{
         sqlText(nullable: true)
         defValue(nullable: true)
         defType(nullable: true)
+        dataSource(nullable: true)
     }
     static mapping = {
         table "report_inputs"
@@ -44,6 +45,6 @@ class ReportInputs implements Serializable{
         sqlText column: 'sql_text', sqlType: 'text'
         defValue column: 'def_value', length: 30
         defType column: 'def_type', length: 10
-
+        dataSource column: 'data_source', length: 2
     }
 }

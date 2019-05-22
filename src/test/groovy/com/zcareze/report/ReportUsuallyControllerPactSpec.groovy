@@ -24,29 +24,25 @@ class ReportUsuallyControllerPactSpec extends Specification implements Controlle
     // 每次测试生成一次，互不干扰
     def setup() {
         ReportGroups.withNewSession {
-            def group1 = new ReportGroups(code:"01", name:"运营简报", comment:"提现整体经营服务规模效果效益等内容的报表", color: "ffc100");
-            def group2 = new ReportGroups(code:"02", name:"服务管理", comment:"有关服务工作开展情况和开展内容等信息的呈现", color: "7BAFA1");
-            def group3 = new ReportGroups(code:"99", name:"监控大屏", comment:"内置专门存放监控大屏报表的分组", color: "b8e986");
+            def group1 = new ReportGroups(code:"01", name:"运营简报", comment:"提现整体经营服务规模效果效益等内容的报表");
+            def group2 = new ReportGroups(code:"02", name:"服务管理", comment:"有关服务工作开展情况和开展内容等信息的呈现");
+            def group3 = new ReportGroups(code:"99", name:"监控大屏", comment:"内置专门存放监控大屏报表的分组");
             group1.save();
             group2.save();
             group3.save();
 
             // 报表
-            def report1 = new Report(code: "KZRZB", name: "科主任周报", grpCode: group1.code, runway: 1, editorName: "王", editorId: "1",cloudId: "2");
-            def report2 = new Report(code: "JCYCD", name: "监测依从度统计", grpCode: group2.code, runway: 2, editorName: "王", editorId: "1", cloudId: "1");
-            def report3 = new Report(code: "TZYB", name: "医生团队月报", grpCode: group1.code, runway: 1, editorName: "王", editorId: "1", cloudId: "2");
-            def report4 = new Report(code: "YYYCD", name: "用药依从性统计", grpCode: group2.code, runway: 1, editorName: "王", editorId: "1", cloudId: "2");
-            def report5 = new Report(code: "YPFX", name: "药品分析", grpCode: group1.code, runway: 1, editorName: "王", editorId: "1", cloudId:"1")
+            def report1 = new Report(code: "KZRZB", name: "科主任周报", grpCode: group1.code, runway: 1, cloudId: "2");
+            def report2 = new Report(code: "JCYCD", name: "监测依从度统计", grpCode: group2.code, runway: 2, cloudId: "1");
+            def report3 = new Report(code: "TZYB", name: "医生团队月报", grpCode: group1.code, runway: 1, cloudId: "2");
+            def report4 = new Report(code: "YYYCD", name: "用药依从性统计", grpCode: group2.code, runway: 1, cloudId: "2");
+            def report5 = new Report(code: "YPFX", name: "药品分析", grpCode: group1.code, runway: 1, cloudId:"1")
 
             report1.save()
             report2.save()
             report3.save()
             report4.save()
             report5.save(flush:true)
-
-            Report.executeUpdate("update Report r set r.editTime=:editTime where r.code=:code", [editTime:new Date()-1, code: 'JCYCD'])
-
-            report2 = Report.findByCode('JCYCD');
 
             new ReportInputs(rpt: report1, name: "orgid", caption: "机构", seqNum: 0, dataType: "31", inputType: 3, sqlText: "select id col_value,name col_title from org_list where kind='H'", defType: "我的机构" ).save()
             new ReportStyle(rpt: report1, scene: 0, fileUrl: "a837ed3a521b11e6bbd8d017c2930236/xslt/cf5a4c0414ec4cdb9ee79244b1479928/f5750f185c5d4bb5ae80fcb3599ae08e.xslt").save()
@@ -86,9 +82,9 @@ class ReportUsuallyControllerPactSpec extends Specification implements Controlle
 
 
             // 大屏
-            def screenReport1 = new Report(code: "01", name: "众康云测试大屏", grpCode: group3.code, runway: 1, editorName: "王", editorId: "1", comment: "测试说明");
-            def screenReport2 = new Report(code: "02", name: "众康云正式大屏", grpCode: group3.code, runway: 1, editorName: "王", editorId: "1", comment: "正式说明");
-            def screenReport3 = new Report(code: "03", name: "众康云大屏", grpCode: group3.code, runway: 1, editorName: "王", editorId: "1", comment: "说明");
+            def screenReport1 = new Report(code: "01", name: "众康云测试大屏", grpCode: group3.code, runway: 1, comment: "测试说明");
+            def screenReport2 = new Report(code: "02", name: "众康云正式大屏", grpCode: group3.code, runway: 1, comment: "正式说明");
+            def screenReport3 = new Report(code: "03", name: "众康云大屏", grpCode: group3.code, runway: 1, comment: "说明");
             screenReport1.save()
             screenReport2.save()
             screenReport3.save()
@@ -199,7 +195,6 @@ class ReportUsuallyControllerPactSpec extends Specification implements Controlle
                 assert data1.reportName == "监测依从度统计"
                 assert data1.groupCode == "02"
                 assert data1.groupName == "服务管理"
-                assert data1.color == "7BAFA1"
                 assert data1.seqNum == 3
                 assert data1.usually == true
                 assert data1.noRead == true
@@ -285,7 +280,6 @@ class ReportUsuallyControllerPactSpec extends Specification implements Controlle
             assert data.reportName == "用药依从性统计"
             assert data.groupCode == "02"
             assert data.groupName == "服务管理"
-            assert data.color == "7BAFA1"
             assert data.seqNum == 1
             assert data.usually == true
             assert data.noRead == false
@@ -373,7 +367,6 @@ class ReportUsuallyControllerPactSpec extends Specification implements Controlle
             assert data.reportName == "监测依从度统计"
             assert data.groupCode == "02"
             assert data.groupName == "服务管理"
-            assert data.color == "7BAFA1"
             assert data.seqNum == 3
             assert data.usually == true
             assert data.noRead == true
@@ -565,7 +558,6 @@ class ReportUsuallyControllerPactSpec extends Specification implements Controlle
             assert data1.reportName == "监测依从度统计"
             assert data1.groupCode == "02"
             assert data1.groupName == "服务管理"
-            assert data1.color == "7BAFA1"
             assert data1.seqNum == 3
             assert data1.usually == true
             assert data1.noRead == true
@@ -654,7 +646,6 @@ class ReportUsuallyControllerPactSpec extends Specification implements Controlle
             assert data.reportName == "用药依从性统计"
             assert data.groupCode == "02"
             assert data.groupName == "服务管理"
-            assert data.color == "7BAFA1"
             assert data.seqNum == 1
             assert data.usually == true
             assert data.noRead == false
@@ -744,7 +735,6 @@ class ReportUsuallyControllerPactSpec extends Specification implements Controlle
             assert data.reportName == "监测依从度统计"
             assert data.groupCode == "02"
             assert data.groupName == "服务管理"
-            assert data.color == "7BAFA1"
             assert data.seqNum == 3
             assert data.usually == true
             assert data.noRead == true

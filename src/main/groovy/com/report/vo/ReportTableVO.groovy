@@ -18,6 +18,6 @@ class ReportTableVO implements Serializable{
     String sqlText
     // 顺序号
     Integer seqNum
-    // 查询方式
-    Integer queryMode
+    // 数据源
+    String dataSource
 }

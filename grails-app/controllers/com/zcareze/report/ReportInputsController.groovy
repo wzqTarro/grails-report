@@ -5,6 +5,7 @@ import com.report.common.CommonValue
 import com.report.common.ReportXmlConstant
 import com.report.dto.ReportParamValue
 import com.report.dto.TableParamDTO
+import com.report.enst.DatasourceConfigKindEnum
 import com.report.enst.QueryInputDefTypeEnum
 import com.report.enst.ReportSystemParamEnum
 import com.report.enst.ResultEnum
@@ -14,12 +15,14 @@ import com.report.result.BaseResult
 import com.report.result.QueryInputValueResult
 import com.report.result.Result
 import com.report.util.CommonUtil
+import com.report.vo.DatasourceConfigVO
 import com.report.vo.QueryInputValueVO
 import com.report.vo.ReportDataVO
 import com.report.vo.ReportInputVO
 import grails.converters.JSON
 import grails.gorm.transactions.Transactional
 import grails.validation.ValidationException
+import groovy.json.JsonSlurper
 import groovy.sql.GroovyRowResult
 import groovy.sql.Sql
 import groovy.xml.MarkupBuilder
@@ -63,6 +66,12 @@ class ReportInputsController {
             render Result.error("报表不存在") as JSON
         }
 
+        def dataSource = reportInputs.dataSource
+        if (!dataSource) {
+            render Result.error("数据源不能为空") as JSON
+            return
+        }
+
         // 判断是否为系统内置参数
         String name = reportInputs.name
         ReportSystemParamEnum e = ReportSystemParamEnum.getEnumByName(name)
@@ -71,12 +80,6 @@ class ReportInputsController {
             return
         }
 
-        /**
-         * TODO 更新报表编辑时间 ps:调用领域类中封装方法修改属性值失败，暂时改为直接赋值
-         */
-        reportInputs.rpt.editorId = staffId
-        reportInputs.rpt.editorName = staffName
-        reportInputs.rpt.editTime = new Date()
         // 主表数据改变后，默认也会更新
         reportInputs.save(flush: true)
         render Result.success() as JSON
@@ -106,14 +109,17 @@ class ReportInputsController {
                 }
             }
             if (reportInputs) {
+                def dataSource = params."dataSource"
+                if (dataSource) {
+                    def reportDataSource = ReportDatasource.findByCode(dataSource)
+                    if (!reportDataSource) {
+                        render Result.error("数据源有误") as JSON
+                        return
+                    }
+                    params.dataSource = null
+                    reportInputs.dataSource = reportDataSource
+                }
                 reportInputs.properties = params
-
-                /**
-                 * TODO 更新报表编辑时间 ps:调用领域类中封装方法修改属性值失败，暂时改为直接赋值
-                 */
-                reportInputs.rpt.editorId = staffId
-                reportInputs.rpt.editorName = staffName
-                reportInputs.rpt.editTime = new Date()
 
                 // 主表数据改变后，默认也会更新
                 if (reportInputs.save(flush: true)) {
@@ -148,12 +154,6 @@ class ReportInputsController {
                 }
             }
             if (reportInput) {
-                /**
-                 * TODO 更新报表编辑时间 ps:调用领域类中封装方法修改属性值失败，暂时改为直接赋值
-                 */
-                reportInput.rpt.editorId = staffId
-                reportInput.rpt.editorName = staffName
-                reportInput.rpt.editTime = new Date()
                 reportInput.delete(flush: true)
                 render Result.success() as JSON
                 return
@@ -298,6 +298,26 @@ class ReportInputsController {
             }
             map.put("defValue", defValue)
 
+            // 数据源
+//            ReportDatasource dataSource = reportInputs.dataSource
+//            def dataSourceMap = new JsonSlurper().parseText(dataSource.config)
+//            DatasourceConfigVO datasourceConfigVO = new DatasourceConfigVO(dataSourceMap)
+//            def dataSourceKind = datasourceConfigVO.kind
+//            // 存在区域云ID为特定的区域数据源
+//            if (DatasourceConfigKindEnum.SPECIALLY.kind == dataSourceKind) {
+                /**
+                 * TODO 获取指定区域云数据
+                 */
+//                def dataSourceCloudId = datasourceConfigVO.cloudId
+//            } else if (DatasourceConfigKindEnum.CENTER.kind == dataSourceKind){
+                /**
+                 * TODO 中心区域数据
+                 */
+//            } else if (DatasourceConfigKindEnum.REGION.kind == dataSourceKind){
+                /**
+                 * TODO 区域数据源 获取职员所在区域数据
+                 */
+//            }
             /**
              * TODO 执行sql获取查询结果
              */
@@ -467,15 +487,5 @@ class ReportInputsController {
         }
         result.error = "参数不能为空"
         render result as JSON
-    }
-
-    protected void notFound() {
-        request.withFormat {
-            form multipartForm {
-                flash.message = message(code: 'default.not.found.message', args: [message(code: 'reportInputs.label', default: 'ReportInputs'), params.id])
-                redirect action: "index", method: "GET"
-            }
-            '*'{ render status: NOT_FOUND }
-        }
     }
 }

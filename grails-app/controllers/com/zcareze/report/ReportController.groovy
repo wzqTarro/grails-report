@@ -2,6 +2,8 @@ package com.zcareze.report
 
 
 import com.report.common.CommonValue
+import com.report.enst.CtrlStatusEnum
+import com.report.enst.DatasourceConfigKindEnum
 import com.report.enst.InputDataTypeEnum
 import com.report.enst.ReportSystemParamEnum
 import com.report.enst.ResultEnum
@@ -11,10 +13,12 @@ import com.report.result.BaseResult
 import com.report.result.Result
 import com.report.service.IFileService
 import com.report.util.CommonUtil
+import com.report.vo.DatasourceConfigVO
 import com.report.vo.ReportViewVO
 import com.report.vo.ViewParameterVO
 import grails.converters.JSON
 import grails.gorm.transactions.Transactional
+import groovy.json.JsonSlurper
 import org.grails.web.json.JSONObject
 
 import static org.springframework.http.HttpStatus.*
@@ -40,22 +44,13 @@ class ReportController {
      * @return
      */
     def addReportList(Report report) {
-        /**
-         * TODO 区域云
-          */
-        report.cloudId = cloudId
         if (!report.validate()) {
             def errorMessage = hasError(report)
             render Result.error(errorMessage) as JSON
             return
         }
 
-        /**
-         * TODO 职员信息
-         */
-        report.editorId = staffId
-        report.editorName = staffName
-
+        report.ctrlStatus = CtrlStatusEnum.BZZCY.code
         report.save(flush: true)
         render Result.success() as JSON
     }
@@ -87,6 +82,7 @@ class ReportController {
                 render Result.error("报表不存在") as JSON
                 return
             }
+            String cloudId = report.cloudId
             Report existsReport = Report.withTenant(cloudId){
                 Report.findByNameOrCode(name, code)
             }
@@ -96,20 +92,11 @@ class ReportController {
             }
             bindData(actualReport, report)
 
-            /**
-             * TODO 职员信息
-             */
-            //Staff staff = new Staff()
-            actualReport.cloudId = cloudId
-            actualReport.editorId = staffId
-            actualReport.editorName = staffName
-
             actualReport.save(flush: true)
             render Result.success() as JSON
             return
         }
         render Result.error("报表不存在") as JSON
-        return
     }
 
     /**
@@ -119,6 +106,18 @@ class ReportController {
     @Transactional
     def deleteReportList(String id) {
         if (id) {
+            Report report = Report.get(id)
+            if (!report) {
+                render Result.error("报表不存在") as JSON
+                return
+            }
+
+            // 只有草稿态才能删除
+            if (report.ctrlStatus != CtrlStatusEnum.BZZCY.code) {
+                render Result.error("只有草稿状态的报表才能删除") as JSON
+                return
+            }
+
             // 删除个人常用报表
             def reportUsually = ReportUsually.where {
                 rpt {
@@ -129,7 +128,6 @@ class ReportController {
             }
 
             // 删除报表及其级联数据
-            Report report = Report.get(id)
             if (report) {
                 report.delete(flush: true)
             }
@@ -163,29 +161,17 @@ class ReportController {
      */
     def getReportList(String name, String groupCode, Integer pageNow, Integer pageSize) {
         BaseResult<Report> result = new BaseResult<>()
-        Integer pageStart = null
-        if (pageNow > -1 && pageSize > -1) {
-            pageStart = pageNow * pageSize
-            if (pageStart < 0) {
-                pageStart = 0
-            }
-        }
         result.list = Report.withTenant(cloudId){
             Report.createCriteria().list {
                 if (name || groupCode) {
-                    if (!name && groupCode) {
-                        eq("grpCode", groupCode)
-                    }
-                    if (name && !groupCode) {
-                        and {
+                    and {
+                        if (name) {
                             ilike("name", "%" + name + "%")
-                            ne("grpCode", "99")
                         }
-                    }
-                    if (name && groupCode) {
-                        and {
-                            ilike("name", "%" + name + "%")
+                        if (groupCode) {
                             eq("grpCode", groupCode)
+                        } else {
+                            ne("grpCode", "99")
                         }
                     }
                 } else {
@@ -193,13 +179,55 @@ class ReportController {
                         ne("grpCode", "99")
                         isNull("grpCode")
                     }
-
                 }
                 if (pageNow > -1 && pageSize > -1) {
-                    firstResult pageStart
+                    firstResult pageNow * pageSize
                     maxResults pageSize
                 }
                 order "code", "asc"
+            }
+        }
+        render result as JSON
+    }
+
+    /**
+     * 条件查询报表清单
+     * @param groupCode
+     * @param reportName
+     * @param rptCloudId
+     * @param ctrlStatus
+     * @param pageNow
+     * @param pageSize
+     * @return
+     */
+    def getByCondition(String groupCode, String reportName, String rptCloudId, Integer ctrlStatus, Integer pageNow, Integer pageSize) {
+        BaseResult<Report> result = new BaseResult<>()
+        if (!rptCloudId) {
+            rptCloudId = null
+        }
+        result.list = Report.withTenant(rptCloudId){
+            Report.createCriteria().list {
+                and {
+                    if (groupCode) {
+                        eq("grpCode", groupCode)
+                    } else {
+                        or {
+                            ne("grpCode", "99")
+                            isNull("grpCode")
+                        }
+                    }
+                    if (reportName) {
+                        ilike("name", "%"+reportName+"%")
+                    }
+                    if (ctrlStatus > -1) {
+                        eq("ctrlStatus", ctrlStatus)
+                    }
+                }
+                order "code", "asc"
+                if (pageNow > -1 && pageSize > -1) {
+                    firstResult pageNow * pageSize
+                    maxResults pageSize
+                }
             }
         }
         render result as JSON
@@ -256,23 +284,23 @@ class ReportController {
      * 获取指定报表最后修改时间
      * @param id
      */
-    def getReportListUpdateTime(String id) {
-        BaseResult<Date> result = new BaseResult<>()
-        if (id) {
-            Report report = Report.get(id)
-            if (report) {
-                Date updateTime = report.editTime
-                result.one = updateTime
-                render result as JSON
-            } else {
-                result.setError("报表不存在")
-                render result as JSON
-            }
-        } else {
-            result.setError("标识不能为空")
-            render result as JSON
-        }
-    }
+//    def getReportListUpdateTime(String id) {
+//        BaseResult<Date> result = new BaseResult<>()
+//        if (id) {
+//            Report report = Report.get(id)
+//            if (report) {
+//                Date updateTime = report.editTime
+//                result.one = updateTime
+//                render result as JSON
+//            } else {
+//                result.setError("报表不存在")
+//                render result as JSON
+//            }
+//        } else {
+//            result.setError("标识不能为空")
+//            render result as JSON
+//        }
+//    }
 
     /**
      * 获取xlst文件的实际访问地址 (用于获取oss访问地址)
@@ -399,10 +427,10 @@ class ReportController {
                 // 前端显示
                 ReportViewVO reportViewVO = new ReportViewVO()
                 // 最后更新时间（时间戳）
-                Long timeLong = 0L
-                if (report.editTime) {
-                    timeLong = report.editTime.getTime()
-                }
+//                Long timeLong = 0L
+//                if (report.editTime) {
+//                    timeLong = report.editTime.getTime()
+//                }
 
                 // 报表样式
                 ReportStyle style = report.styleList[0]
@@ -426,7 +454,8 @@ class ReportController {
                         }
                     }
                 }
-                reportViewVO.access(report.id, report.code, report.name, report.grpCode, fileUrl, style.chart, report.editTime, timeLong, report.runway)
+                //reportViewVO.access(report.id, report.code, report.name, report.grpCode, fileUrl, style.chart, report.editTime, timeLong, report.runway)
+                reportViewVO.access(report.id, report.code, report.name, report.grpCode, fileUrl, style.chart, null, null, report.runway)
                 reportViewVO.inputParams = viewParameterVOList
 
                 Map<String, Object> map = new HashMap<>(1)
@@ -479,16 +508,22 @@ class ReportController {
 
                 // 只获取数据表中用到的输入参数
                 tablesSet.each { ReportTables table ->
-                    // 查询方式
-                    Integer queryMode = table.queryMode
+                    // 数据源
+                    ReportDatasource datasource = table.dataSource
+                    // 数据源配置
+                    String config  = datasource.config
+                    def configMap = new JsonSlurper().parseText(config)
+                    DatasourceConfigVO datasourceConfigVO = new DatasourceConfigVO(configMap)
+                    // 数据源类型
+                    Integer kind = datasourceConfigVO.kind
 
                     List<String> paramList = new ArrayList<>()
 
                     // 自定义方式
-                    if (queryMode == 0) {
+                    if (DatasourceConfigKindEnum.DATA_CENTER_REAL_TABLE.kind != kind) {
                         String sql = table.sqlText
                         paramList = CommonUtil.analysisSql(sql)
-                    } else if (queryMode == 1) {
+                    } else {
                         paramList.add("startWith");
                         paramList.add("endWith");
                     }
@@ -540,10 +575,10 @@ class ReportController {
                 // 前端显示
                 ReportViewVO reportViewVO = new ReportViewVO()
                 // 最后更新时间（时间戳）
-                Long timeLong = 0L
-                if (report.editTime) {
-                    timeLong = report.editTime.getTime()
-                }
+//                Long timeLong = 0L
+//                if (report.editTime) {
+//                    timeLong = report.editTime.getTime()
+//                }
 
                 // 报表样式
                 ReportStyle style = report.styleList[0]
@@ -565,7 +600,8 @@ class ReportController {
                         }
                     }
                 }
-                reportViewVO.access(report.id, report.code, report.name, report.grpCode, fileUrl, style.chart, report.editTime, timeLong, report.runway)
+                //reportViewVO.access(report.id, report.code, report.name, report.grpCode, fileUrl, style.chart, report.editTime, timeLong, report.runway)
+                reportViewVO.access(report.id, report.code, report.name, report.grpCode, fileUrl, style.chart, null, null, report.runway)
                 reportViewVO.inputParams = viewParameterVOList
                 result.one = reportViewVO
                 render result as JSON
@@ -577,15 +613,5 @@ class ReportController {
             result.setError("标识不能为空")
         }
         render result as JSON
-    }
-
-    protected void notFound() {
-        request.withFormat {
-            form multipartForm {
-                flash.message = message(code: 'default.not.found.message', args: [message(code: 'report.label', default: 'Report'), params.id])
-                redirect action: "index", method: "GET"
-            }
-            '*'{ render status: NOT_FOUND }
-        }
     }
 }

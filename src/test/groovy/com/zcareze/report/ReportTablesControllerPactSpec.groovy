@@ -49,12 +49,18 @@ class ReportTablesControllerPactSpec extends Specification implements Controller
         Report.withNewSession {
             def group = new ReportGroups(code:"06", name:"pc报表样式")
             group.save()
-            def report4 = new Report(code: "0315", name:"建档情况分析表", runway: 1, grpCode: group.code)
+            def report4 = new Report(cloudId: "1", code: "0315", name:"建档情况分析表", runway: 1, grpCode: group.code)
             report4.save(flush: true)
 
+            ReportDatasource datasource = new ReportDatasource(code: "00", name: "中心数据源", config: '{"kind":1}')
+            ReportDatasource datasource1 = new ReportDatasource(code: "05", name: "数据中心实表", config: '{"kind":5}')
+            datasource.save()
+            datasource1.save(flush: true)
             new ReportStyle(rpt: report4, scene:0, fileUrl:"asd",chart: "<chart name=\\\"chart1\\\" theme=\\\"walden\\\" tab=\\\"建档情况\\\"><type>bar</type><title>机构建档情况</title><x_col>机构名称</x_col><y_col><field>建档数</field><name>建档数</name></y_col></chart>").save()
-            new ReportTables(queryMode: 0, name:"createRecord", rpt: report4, seqNum: 2, sqlText: "select ol.`id` as name, COUNT(rl.`id`) as count FROM org_list ol INNER JOIN `resident_list` rl on rl.`org_id`= ol.`id` where ol.`id` = [orgID] and rl.`commit_time` BETWEEN '2019-03-01' and '2019-03-30' GROUP BY ol.`id`").save()
-            new ReportTables(queryMode: 1, name:"dataCenter", rpt: report4, seqNum: 1).save()
+            def table = new ReportTables(dataSource: datasource, name:"createRecord", rpt: report4, seqNum: 2, sqlText: "select ol.`id` as name, COUNT(rl.`id`) as count FROM org_list ol INNER JOIN `resident_list` rl on rl.`org_id`= ol.`id` where ol.`id` = [orgID] and rl.`commit_time` BETWEEN '2019-03-01' and '2019-03-30' GROUP BY ol.`id`")
+            table.save(flush:true)
+            println table.errors
+            new ReportTables(dataSource: datasource1, name:"dataCenter", rpt: report4, seqNum: 1).save()
             new ReportInputs(caption: "机构", dataType: "31", defType: "我的机构", inputType: 3, name: "orgID", rpt: report4,
                     seqNum: 1, sqlText: "select ol.id col_value,ol.name col_title from org_list ol where ol.id=[my_org_id]",
             ).save()
@@ -63,6 +69,22 @@ class ReportTablesControllerPactSpec extends Specification implements Controller
             ).save()
             new ReportInputs(caption: "结束日期", dataType: "23", defType: "今天", inputType: 1, name: "endWith", rpt: report4,
                     seqNum: 3
+            ).save()
+
+
+            def report = new Report(cloudId: "1", code: "0000", name:"数据中心虚表", runway: 1, grpCode: group.code)
+            report.save()
+
+            ReportDatasource datasource3 = new ReportDatasource(code: "04", name: "数据中心虚表", config: '{"kind":4}')
+            datasource3.save(flush: true)
+            new ReportStyle(rpt: report, scene:0, fileUrl:"asd",chart: "<chart name=\\\"chart1\\\" theme=\\\"walden\\\" tab=\\\"建档情况\\\"><type>bar</type><title>机构建档情况</title><x_col>机构名称</x_col><y_col><field>建档数</field><name>建档数</name></y_col></chart>").save()
+//            new ReportTables(dataSource: datasource3, name:"dataCenter", rpt: report, seqNum: 1, sqlText: "SELECT td.contents::json ->> 'a_num' as a_num, td.contents::json ->> 's_num' as s_num FROM test_daily td WHERE (td.contents::json ->> 's_num')::int = [num]").save()
+//            new ReportInputs(caption: "数目", dataType: "11", defType: "数目", inputType: 3, name: "num", rpt: report,
+//                    seqNum: 1, sqlText: "SELECT a.id col_value, a.msg col_title FROM ( SELECT '1180' id, '数目A' msg UNION ALL SELECT '1189' id, '数目B' msg) a",
+//            ).save()
+            new ReportTables(dataSource: datasource3, name:"dataCenter", rpt: report, seqNum: 1, sqlText: "SELECT * FROM TEST_DAILY where timed < [endTime]").save()
+            new ReportInputs(caption: "结束时间", dataType: "23", defType: "今天", inputType: 1, name: "endTime", rpt: report,
+                    seqNum: 1
             ).save()
         }
     }
@@ -76,6 +98,7 @@ class ReportTablesControllerPactSpec extends Specification implements Controller
             ReportInputs.executeUpdate("delete ReportInputs")
             ReportGroups.executeUpdate("delete ReportGroups")
             Report.executeUpdate("delete Report")
+            ReportDatasource.executeUpdate("delete ReportDatasource")
         }
     }
     void "获取指定报表的数据-契约测试1"() {
@@ -90,7 +113,7 @@ class ReportTablesControllerPactSpec extends Specification implements Controller
                 given("获取数据")
                 withAttributes(method: 'get', path: '/metrics',
                         headers: ['Content-Type': 'application/x-www-form-urlencoded'],
-                        query: [startWith:'2019-01-12', endWith:'2019-04-20', dataType: 'dataCenter']
+                        query: [startWith:'2019-01-12', endWith:'2019-04-20', dataType: 'dataCenter', owners: '{}']
                 )
                 willRespondWith(
                         status: 200,
@@ -119,7 +142,9 @@ class ReportTablesControllerPactSpec extends Specification implements Controller
 
                 def reportId = null
                 Report.withNewSession {
-                    Report report = Report.findByCode("0315")
+                    Report report = Report.withTenant("1"){
+                        Report.findByCode("0315")
+                    }
                     reportId = report.id
                 }
 
@@ -241,6 +266,98 @@ class ReportTablesControllerPactSpec extends Specification implements Controller
             result == PactVerificationResult.Ok.INSTANCE
     }
 
+    void "获取指定报表的数据-契约测试2"() {
+        given:
+        def api = new PactBuilder()
+        api{
+            serviceConsumer "DATA-CENTER-SERVICE"
+            hasPactWith "DataSrv"
+            port 1234
+        }
+        api{
+            given("获取数据")
+            withAttributes(method: 'post', path: '/sql',
+                    headers: ['Content-Type': 'application/x-www-form-urlencoded'],
+                    //body: "script=SELECT td.contents::json ->> 'a_num' as a_num, td.contents::json ->> 's_num' as s_num FROM test_daily td WHERE (td.contents::json ->> 's_num')::int = ?&params=[1180]"
+                    body:"script=SELECT * FROM TEST_DAILY where timed < ?&params=[2019-04-03]"
+            )
+            willRespondWith(
+                    status: 200,
+                    headers: ['Content-Type': 'application/json'],
+                    body:[
+                            [
+                                seq_id: 1488170,
+                                type: "testDaily",
+                                timed:"2019-03-31T16:00:00Z",
+                                contents:"{\"a_num\": 1180, \"s_num\": 1180,\"分类\": \"A\"}",
+                                metadata:"{\"a_num\": \"激活数\", \"s_num\": \"签约数\", \"groupField\": \"分类\"}",
+                                str_id:"1a"
+                            ],
+                            [
+                                "seq_id": 1488171,
+                                "type": "testDaily",
+                                "timed":"2019-04-01T16:00:00Z",
+                                "contents":"{\"a_num\": 1180, \"s_num\": 1180,\"分类\": \"A\"}",
+                                "metadata":"{\"a_num\": \"激活数\", \"s_num\": \"签约数\", \"groupField\": \"分类\"}",
+                                "str_id":"2a"
+                            ]
+
+                    ]
+            )
+        }
+
+        when:"执行"
+        def result = api.runTest { mockServer ->
+            def dataApi = Feign.builder()
+                    .client(new ApacheHttpClient())
+                    .decoder(new GsonDecoder())
+                    .encoder(new GsonEncoder())
+                    .target(IDataCenterService.class, mockServer.url as String)
+
+            def reportId = null
+            Report.withNewSession {
+                Report report = Report.findByCode("0000")
+                reportId = report.id
+            }
+
+            ReportViewParam reportParam = new ReportViewParam()
+            reportParam.reportId = reportId
+
+            ReportParamValue paramValue = new ReportParamValue()
+            paramValue.name = "endTime"
+            paramValue.value = "2019-04-03"
+            paramValue.title = "结束时间"
+
+            List<ReportParamValue> paramValues = new ArrayList<>()
+            paramValues.add(paramValue)
+            reportParam.paramValues = paramValues
+
+            DataFacadeService dataFacadeService = new DataFacadeService()
+            dataFacadeService.dataCenterService = dataApi
+            controller.dataFacadeService = dataFacadeService
+            controller.getReportData(reportParam)
+
+            assert response.status == 200
+            assert response.getHeader("Content-Type") == "application/json;charset=UTF-8"
+
+            def jsonData = response.json
+            assert jsonData.code == 1
+            assert jsonData.message == "执行成功"
+
+            def one = jsonData.one
+            assert one
+            def xml = one.xmlData
+            assert xml
+
+            //println xml
+
+            Validator xmlValidate = XmlUtil.validateReport()
+            assert xmlValidate.validate(new StreamSource(new ByteArrayInputStream(xml.bytes))) == null
+        }
+        then: "结果"
+        result == PactVerificationResult.Ok.INSTANCE
+    }
+
     void "api获取指定报表的数据-契约测试1"() {
         given:
         def api = new PactBuilder()
@@ -253,7 +370,7 @@ class ReportTablesControllerPactSpec extends Specification implements Controller
             given("获取数据")
             withAttributes(method: 'get', path: '/metrics',
                     headers: ['Content-Type': 'application/x-www-form-urlencoded'],
-                    query: [startWith:'2019-01-12', endWith:'2019-04-20', dataType: 'dataCenter']
+                    query: [startWith:'2019-01-12', endWith:'2019-04-20', dataType: 'dataCenter', owners: '{}']
             )
             willRespondWith(
                     status: 200,
@@ -401,6 +518,98 @@ class ReportTablesControllerPactSpec extends Specification implements Controller
             assert dataTableList.find{ d ->
                 d.attributes().name == "dataCenter" && d.attributes().seq_num == "1" && d.value()[0].name() == "record" && d.value()[0].value()[0].name() == "orgid"  && d.value()[0].value()[0].value()[0] == "1" && d.value()[0].value()[1].name() == "orgName"  && d.value()[0].value()[1].value()[0] == "firstHospital" && d.value()[1].name() == "record" && d.value()[1].value()[0].name() == "orgid"  && d.value()[1].value()[0].value()[0] == "2" && d.value()[1].value()[1].name() == "orgName"  && d.value()[1].value()[1].value()[0] == "lastHospital"
             }
+        }
+        then: "结果"
+        result == PactVerificationResult.Ok.INSTANCE
+    }
+
+    void "api获取指定报表的数据-契约测试2"() {
+        given:
+        def api = new PactBuilder()
+        api{
+            serviceConsumer "DATA-CENTER-SERVICE"
+            hasPactWith "DataSrv"
+            port 1234
+        }
+        api{
+            withAttributes(method: 'post', path: '/sql',
+                    headers: ['Content-Type': 'application/x-www-form-urlencoded'],
+                    //body: "script=SELECT td.contents::json ->> 'a_num' as a_num, td.contents::json ->> 's_num' as s_num FROM test_daily td WHERE (td.contents::json ->> 's_num')::int = ?&params=[1180]"
+                    body:"script=SELECT * FROM TEST_DAILY where timed < ?&params=[2019-04-03]"
+            )
+            willRespondWith(
+                    status: 200,
+                    headers: ['Content-Type': 'application/json'],
+                    body:[
+                            [
+                                    seq_id: 1488170,
+                                    type: "testDaily",
+                                    timed:"2019-03-31T16:00:00Z",
+                                    contents:"{\"a_num\": 1180, \"s_num\": 1180,\"分类\": \"A\"}",
+                                    metadata:"{\"a_num\": \"激活数\", \"s_num\": \"签约数\", \"groupField\": \"分类\"}",
+                                    str_id:"1a"
+                            ],
+                            [
+                                    "seq_id": 1488171,
+                                    "type": "testDaily",
+                                    "timed":"2019-04-01T16:00:00Z",
+                                    "contents":"{\"a_num\": 1180, \"s_num\": 1180,\"分类\": \"A\"}",
+                                    "metadata":"{\"a_num\": \"激活数\", \"s_num\": \"签约数\", \"groupField\": \"分类\"}",
+                                    "str_id":"2a"
+                            ]
+
+                    ]
+            )
+        }
+
+        when:"执行"
+        def result = api.runTest { mockServer ->
+            def dataApi = Feign.builder()
+                    .client(new ApacheHttpClient())
+                    .decoder(new GsonDecoder())
+                    .encoder(new GsonEncoder())
+                    .target(IDataCenterService.class, mockServer.url as String)
+
+            def reportId = null
+            Report.withNewSession {
+                Report report = Report.findByCode("0000")
+                reportId = report.id
+            }
+
+            ReportViewParam reportParam = new ReportViewParam()
+            reportParam.reportId = reportId
+
+            ReportParamValue paramValue = new ReportParamValue()
+            paramValue.name = "endTime"
+            paramValue.value = "2019-04-03"
+            paramValue.title = "结束时间"
+
+            List<ReportParamValue> paramValues = new ArrayList<>()
+            paramValues.add(paramValue)
+            reportParam.paramValues = paramValues
+
+            DataFacadeService dataFacadeService = new DataFacadeService()
+            dataFacadeService.dataCenterService = dataApi
+            controller.dataFacadeService = dataFacadeService
+            controller.getReportDataOld((reportParam as JSON) as String)
+
+            assert response.status == 200
+            assert response.getHeader("Content-Type") == "application/json;charset=UTF-8"
+
+            def jsonData = response.json
+            assert jsonData.errcode == 0
+
+            def bizData = jsonData.bizData
+            assert bizData
+
+            def one = bizData.reportDataVO
+            assert one
+            def xml = one.xmlData
+            assert xml
+
+            //println xml
+            Validator xmlValidate = XmlUtil.validateReport()
+            assert xmlValidate.validate(new StreamSource(new ByteArrayInputStream(xml.bytes))) == null
         }
         then: "结果"
         result == PactVerificationResult.Ok.INSTANCE

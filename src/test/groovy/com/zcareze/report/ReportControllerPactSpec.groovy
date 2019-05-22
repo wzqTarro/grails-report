@@ -18,18 +18,21 @@ import spock.lang.Specification
 class ReportControllerPactSpec extends Specification implements ControllerUnitTest<ReportController> {
     def setup(){
         Report.withNewSession {
-            def group1 = new ReportGroups(code:"01", name:"运营简报", comment:"提现整体经营服务规模效果效益等内容的报表", color: "ffc100");
-            def group2 = new ReportGroups(code:"02", name:"服务管理", comment:"有关服务工作开展情况和开展内容等信息的呈现", color: "7BAFA1");
-            def group3 = new ReportGroups(code:"99", name:"监控大屏", comment:"内置专门存放监控大屏报表的分组", color: "b8e986");
+            def datasource = new ReportDatasource(code: "00", name: "中心数据源", config: '{"kind":1}')
+            datasource.save()
+
+            def group1 = new ReportGroups(code:"01", name:"运营简报", comment:"提现整体经营服务规模效果效益等内容的报表");
+            def group2 = new ReportGroups(code:"02", name:"服务管理", comment:"有关服务工作开展情况和开展内容等信息的呈现");
+            def group3 = new ReportGroups(code:"99", name:"监控大屏", comment:"内置专门存放监控大屏报表的分组");
             group1.save();
             group2.save();
             group3.save();
 
-            def report = new Report(code: "JCYCD", name: "监测依从度统计", grpCode: group1.code, runway: 2, editorName: "王", editorId: "1");
-            def report1 = new Report(code: "TZYB", name: "医生团队月报", grpCode: group2.code, runway: 1, editorName: "王", editorId: "1");
+            def report = new Report(code: "JCYCD", name: "监测依从度统计", grpCode: group1.code, runway: 2);
+            def report1 = new Report(code: "TZYB", name: "医生团队月报", grpCode: group2.code, runway: 1);
             // 大屏
-            def report2 = new Report(code: "CS", name: "测试大屏", grpCode: group3.code, runway: 1, editorName: "王", editorId: "1");
-            def report3 = new Report(code: "ZS", name: "正式大屏", grpCode: group3.code, runway: 2, editorName: "王", editorId: "1");
+            def report2 = new Report(code: "CS", name: "测试大屏", grpCode: group3.code, runway: 1);
+            def report3 = new Report(code: "ZS", name: "正式大屏", grpCode: group3.code, runway: 2);
             report.save()
             report1.save()
             report3.save()
@@ -37,13 +40,9 @@ class ReportControllerPactSpec extends Specification implements ControllerUnitTe
 
             new ReportStyle(rpt: report, scene: 0, fileUrl: "123").save()
 
-            Report.executeUpdate("update Report r set r.editTime=:editTime where r.code=:code", [editTime:Date.parse("yyyy-MM-dd HH:mm:ss", "2018-04-18 16:00:00"), code: 'JCYCD'])
-
-            report = Report.findByCode('JCYCD');
-
             new ReportInputs(rpt: report1, name: "orgid", caption: "机构", seqNum: 0, dataType: "31", inputType: 3, sqlText: "select id col_value,name col_title from org_list where kind='H'", defType: "我的机构" ).save()
             new ReportStyle(rpt: report1, scene: 0, fileUrl: "a837ed3a521b11e6bbd8d017c2930236/xslt/cf5a4c0414ec4cdb9ee79244b1479928/f5750f185c5d4bb5ae80fcb3599ae08e.xslt").save()
-            new ReportTables(queryMode: 0,  rpt: report1, name: "table", sqlText: "select A.* from org_list as A,(SELECT CODE FROM org_list as B where id=[orgid]) as C where A.code like CONCAT(C.code,'%')", seqNum: 1).save()
+            new ReportTables(dataSource: datasource,  rpt: report1, name: "table", sqlText: "select A.* from org_list as A,(SELECT CODE FROM org_list as B where id=[orgid]) as C where A.code like CONCAT(C.code,'%')", seqNum: 1).save()
             new ReportGrantTo(rpt: report1, orgId: "1", roles: "11", manage: 1, granter: "王").save()
             new ReportGrantTo(rpt: report1, orgId: "2", roles: "03;04;11", manage: 1, granter: "王").save()
             new ReportGrantTo(rpt: report1, orgId: "3", roles: "01;02;11", manage: 1, granter: "王").save()
@@ -58,7 +57,7 @@ class ReportControllerPactSpec extends Specification implements ControllerUnitTe
             report4.save(flush: true)
 
             new ReportStyle(rpt: report4, scene:0, fileUrl:"asd",chart: "<chart name=\\\"chart1\\\" theme=\\\"walden\\\" tab=\\\"建档情况\\\"><type>bar</type><title>机构建档情况</title><x_col>机构名称</x_col><y_col><field>建档数</field><name>建档数</name></y_col></chart>").save()
-            new ReportTables(queryMode: 0,  name:"建档情况", rpt: report4, seqNum: 1, sqlText: "select ol.`name` 机构名称, COUNT(rl.`id`) 建档数 FROM org_list ol INNER JOIN `resident_list` rl on rl.`org_id`= ol.`id` where ol.`id` = [orgID] and rl.`commit_time` BETWEEN '2019-03-01' and '2019-03-30' GROUP BY ol.`id`").save()
+            new ReportTables(dataSource: datasource,  name:"建档情况", rpt: report4, seqNum: 1, sqlText: "select ol.`name` 机构名称, COUNT(rl.`id`) 建档数 FROM org_list ol INNER JOIN `resident_list` rl on rl.`org_id`= ol.`id` where ol.`id` = [orgID] and rl.`commit_time` BETWEEN '2019-03-01' and '2019-03-30' GROUP BY ol.`id`").save()
             new ReportInputs(caption: "机构", dataType: "31", defType: "我的机构", inputType: 3, name: "orgID", rpt: report4,
                     seqNum: 1, sqlText: "select ol.id col_value,ol.name col_title from org_list ol where ol.id=[my_org_id]",
             ).save()
@@ -81,6 +80,7 @@ class ReportControllerPactSpec extends Specification implements ControllerUnitTe
             ReportInputs.executeUpdate("delete ReportInputs")
             ReportGroups.executeUpdate("delete ReportGroups")
             Report.executeUpdate("delete Report")
+            ReportDatasource.executeUpdate("delete ReportDatasource")
         }
     }
 

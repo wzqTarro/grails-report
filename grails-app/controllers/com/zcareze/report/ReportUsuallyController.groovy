@@ -440,15 +440,4 @@ class ReportUsuallyController {
         result.list = reportUsuallyVOList
         render result as JSON
     }
-
-
-    protected void notFound() {
-        request.withFormat {
-            form multipartForm {
-                flash.message = message(code: 'default.not.found.message', args: [message(code: 'reportUsually.label', default: 'ReportUsually'), params.id])
-                redirect action: "index", method: "GET"
-            }
-            '*'{ render status: NOT_FOUND }
-        }
-    }
 }

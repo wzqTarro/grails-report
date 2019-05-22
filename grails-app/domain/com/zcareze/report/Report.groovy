@@ -20,16 +20,14 @@ class Report implements Serializable, MultiTenant<Report>{
     String comment
     /** 执行方式 **/
     Integer runway
-    /** 编辑时间 **/
-    Date editTime
-    /** 编辑人ID **/
-    String editorId
-    /** 编辑人姓名 **/
-    String editorName
     /** 多租户鉴别字段 **/
     String cloudId
+    // 固化报表
+    Integer isFixed
+    // 管理状态
+    Integer ctrlStatus
 
-    static hasMany = [inputList: ReportInputs, tableList: ReportTables, styleList: ReportStyle, openToList: ReportOpenTo, grantToList: ReportGrantTo]
+    static hasMany = [ctrlLogList: ReportCtrlLog, inputList: ReportInputs, tableList: ReportTables, styleList: ReportStyle, openToList: ReportOpenTo, grantToList: ReportGrantTo]
 
     static constraints = {
         code(unique: 'cloudId')
@@ -37,10 +35,9 @@ class Report implements Serializable, MultiTenant<Report>{
         grpCode(nullable: true)
         comment(nullable: true)
         runway(nullable: true, inList: [1, 2])
-        editorId(nullable: true)
-        editorName(nullable: true)
-        editTime(nullable: true)
         cloudId(nullable: true)
+        isFixed(nullable: true)
+        ctrlStatus(nullable: true, inList: [0, 1, -1, 2, -2]) // 0-编制中草稿，1-提请审核，-1-审核退回，2-审核通过，-2-停止使用
     }
 
     static mapping = {
@@ -48,12 +45,13 @@ class Report implements Serializable, MultiTenant<Report>{
 
         tenantId name: 'cloudId'
         id generator: 'uuid', column: 'id', sqlType: 'char', length: 32
-        code column: 'code', length: 5, unique: true
-        name column: 'name', length: 30, unique: true
+        code column: 'code', length: 5, unique: 'cloudId'
+        name column: 'name', length: 30, unique: 'cloudId'
         grpCode column: 'grp_code', length: 2
         comment column: 'comment', length: 100
-        editorId column: 'editor_id', sqlType: 'char', length: 32
-        editorName column: 'editor_name', length: 50
+        isFixed column: 'is_fixed', sqlType: 'int', length: 1
+        cloudId column: 'cloud_id', sqlType: 'char', length: 32
+        ctrlStatus column: 'ctrl_status', sqlType: 'int', length: 1
 
         // 级联操作
         inputList cascade: 'all'
@@ -61,19 +59,6 @@ class Report implements Serializable, MultiTenant<Report>{
         styleList cascade: 'all'
         openToList cascade: 'all'
         grantToList cascade: 'all'
-    }
-
-    def abc() {
-        name = "test"
-        editTime = new Date()
-    }
-
-    def beforeInsert() {
-        editTime = new Date()
-    }
-
-    def beforeUpdate() {
-
-        editTime = new Date()
+        ctrlLogList cascade: 'all'
     }
 }

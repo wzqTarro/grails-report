@@ -55,12 +55,6 @@ class ReportStyleController {
             }
 
             reportStyle.rpt = report
-            /**
-             * TODO 更新报表编辑时间 ps:调用领域类中封装方法修改属性值失败，暂时改为直接赋值
-             */
-            reportStyle.rpt.editorId = staffId
-            reportStyle.rpt.editorName = staffName
-            reportStyle.rpt.editTime = new Date()
 
             /**
              * TODO 上传xslt
@@ -161,13 +155,6 @@ class ReportStyleController {
             }
         }
 
-        /**
-         * TODO 更新报表编辑时间 ps:调用领域类中封装方法修改属性值失败，暂时改为直接赋值
-         */
-        reportStyle.rpt.editorId = staffId
-        reportStyle.rpt.editorName = staffName
-        reportStyle.rpt.editTime = new Date()
-
         if (reportStyle.save(flush:true)) {
             render Result.success() as JSON
             return
@@ -199,12 +186,6 @@ class ReportStyleController {
                 }
             }
             if (reportStyle) {
-                /**
-                 * TODO 更新报表编辑时间 ps:调用领域类中封装方法修改属性值失败，暂时改为直接赋值
-                 */
-                reportStyle.rpt.editorId = staffId
-                reportStyle.rpt.editorName = staffName
-                reportStyle.rpt.editTime = new Date()
 
                 /**
                  * TODO 删除文件
@@ -275,14 +256,5 @@ class ReportStyleController {
         }
         result.list = reportStyleVOList
         render result as JSON
-    }
-    protected void notFound() {
-        request.withFormat {
-            form multipartForm {
-                flash.message = message(code: 'default.not.found.message', args: [message(code: 'reportStyle.label', default: 'ReportStyle'), params.id])
-                redirect action: "index", method: "GET"
-            }
-            '*'{ render status: NOT_FOUND }
-        }
     }
 }

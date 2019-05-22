@@ -4,12 +4,15 @@ import com.report.common.CommonValue
 import com.report.dto.ReportParamValue
 import com.report.dto.TableParamDTO
 import com.report.dto.XmlDataDTO
+import com.report.enst.DatasourceConfigKindEnum
 import com.report.enst.QueryInputDefTypeEnum
 import com.report.enst.ReportSystemParamEnum
 import com.report.service.IDataCenterService
 import com.report.util.CommonUtil
+import com.report.vo.DatasourceConfigVO
 import grails.converters.JSON
 import grails.gorm.transactions.Transactional
+import groovy.json.JsonSlurper
 import groovy.sql.Sql
 import org.apache.http.HttpEntity
 import org.apache.http.client.HttpClient
@@ -47,10 +50,18 @@ class DataFacadeService {
             tableParamDTO.reportTables = table
 
             String reportId = table.rpt.id
-            Integer queryMode = table.queryMode
 
-            // 自定义查询
-            if (queryMode == 0) {
+            // 数据源
+            ReportDatasource datasource = table.dataSource
+            // 数据源配置
+            String config  = datasource.config
+            def configMap = new JsonSlurper().parseText(config)
+            DatasourceConfigVO datasourceConfigVO = new DatasourceConfigVO(configMap)
+            // 数据源类型
+            Integer kind = datasourceConfigVO.kind
+
+            // 不是数据中心实表查询
+            if (DatasourceConfigKindEnum.DATA_CENTER_REAL_TABLE.kind != kind) {
                 /** 解析查询语句中的参数 **/
                 // sql语句
                 String sql = table.sqlText
@@ -110,40 +121,59 @@ class DataFacadeService {
                 /**
                  * TODO
                  */
-                def grailsApplication = ((GrailsWebRequest)RequestContextHolder.currentRequestAttributes()).getAttributes().getGrailsApplication()
-                // 查询结果
-                def url = grailsApplication.config.getProperty("select.dataSource.url")
-                def user = grailsApplication.config.getProperty("select.dataSource.user")
-                def pwd = grailsApplication.config.getProperty("select.dataSource.pwd")
-                def driverClassName = grailsApplication.config.getProperty("select.dataSource.driverClassName")
-                // 执行sql
-                Sql db = Sql.newInstance(url,
-                        user, pwd,
-                        driverClassName)
+                List rows = null
                 List<String> columnNameList = new ArrayList()
-                List rows = db.rows(sql, paramValues, { ResultSetMetaData result ->
-                    // 字段名
-                    int count = result.getColumnCount()
-                    for (i in 1..count) {
-                        def name = result.getColumnName(i)
-                        String key = CommonUtil.toHumpStr(name)
-                        columnNameList.add(key)
+                // 非数据中心虚表查询
+                if (DatasourceConfigKindEnum.DATA_CENTER_VIRTUAL_TABLE.kind != kind) {
+                    def grailsApplication = ((GrailsWebRequest)RequestContextHolder.currentRequestAttributes()).getAttributes().getGrailsApplication()
+                    // 查询结果
+                    def url = grailsApplication.config.getProperty("select.dataSource.url")
+                    def user = grailsApplication.config.getProperty("select.dataSource.user")
+                    def pwd = grailsApplication.config.getProperty("select.dataSource.pwd")
+                    def driverClassName = grailsApplication.config.getProperty("select.dataSource.driverClassName")
+                    // 执行sql
+                    Sql db = Sql.newInstance(url,
+                            user, pwd,
+                            driverClassName)
+                    rows = db.rows(sql, paramValues, { ResultSetMetaData result ->
+                        // 字段名
+                        int count = result.getColumnCount()
+                        for (i in 1..count) {
+                            def name = result.getColumnName(i)
+                            String key = CommonUtil.toHumpStr(name)
+                            columnNameList.add(key)
+                        }
+                    })
+                } else {
+                    rows = dataCenterService.getVirtualData(sql, paramValues)
+                    if (rows) {
+                        def value = rows.get(0)
+                        value.each {k, v ->
+                            columnNameList.add(k)
+                        }
                     }
-                })
-
+                }
                 tableParamDTO.rowList = rows
                 tableParamDTO.columnNameList = columnNameList
-            } else if (queryMode == 1) { // 数据中心
+            }else{ // 数据中心
                 // 开始时间
                 def startTimeParam = paramNameMap.get("startWith")
                 // 结束时间
                 def endTimeParam = paramNameMap.get("endWith")
                 String startTime = startTimeParam?.value
                 String endTime = endTimeParam?.value
+
+                List<String> columnNameList = new ArrayList()
                 if (startTime && endTime) {
                     tableParamDTO.rowList = dataCenterService.getData(startTime, endTime, table.name, new HashMap<String, Object>())
-                    tableParamDTO.columnNameList = new ArrayList()
+                    if (tableParamDTO.rowList) {
+                        def value = tableParamDTO.rowList.get(0)
+                        value.each {k, v ->
+                            columnNameList.add(k)
+                        }
+                    }
                 }
+                tableParamDTO.columnNameList = columnNameList
             }
             tableParamDTOList.add(tableParamDTO)
         }

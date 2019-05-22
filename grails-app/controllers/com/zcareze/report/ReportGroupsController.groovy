@@ -118,18 +118,38 @@ class ReportGroupsController {
             result.setList(list);
         }
         render result as JSON
-        /*render(message:"", book: {
-            id book.id
-        })*/
     }
-
-    protected void notFound() {
-        request.withFormat {
-            form multipartForm {
-                flash.message = message(code: 'default.not.found.message', args: [message(code: 'reportGroups.label', default: 'ReportGroups'), params.id])
-                redirect action: "index", method: "GET"
+    /**
+     * 根据名称、编码查询
+     * @param name
+     * @param code
+     * @param pageNow
+     * @param pageSize
+     * @return
+     */
+    def getByCondition(String name, String code, Integer pageNow, Integer pageSize) {
+        BaseResult<ReportGroups> result = new BaseResult<>()
+        result.list = ReportGroups.createCriteria().list {
+            if (name) {
+                if (code) {
+                    and{
+                        ilike("name", '%'+name+'%')
+                        eq("code", code)
+                    }
+                }else{
+                    ilike('name', '%'+ name +'%')
+                }
+            } else {
+                if (code) {
+                    eq("code", code)
+                }
             }
-            '*'{ render status: NOT_FOUND }
+            order "code", "asc"
+            if (pageNow > -1 && pageSize >-1) {
+                firstResult pageNow * pageSize
+                maxResults pageSize
+            }
         }
+        render result as JSON
     }
 }

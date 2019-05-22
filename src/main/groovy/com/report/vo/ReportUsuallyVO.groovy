@@ -57,14 +57,12 @@ class ReportUsuallyVO implements Serializable{
             // 报表
             this.reportId = report.id
             this.reportName = report.name
-            this.updateTime = report.editTime.getTime()
 
             // 报表分组
             ReportGroups reportGroups = ReportGroups.findByCode(report.grpCode)
             if (reportGroups) {
                 this.groupName = reportGroups.name
                 this.groupCode = reportGroups.code
-                this.color = reportGroups.color
             }
         }
     }

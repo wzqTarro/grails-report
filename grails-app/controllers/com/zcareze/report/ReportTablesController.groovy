@@ -56,21 +56,33 @@ class ReportTablesController {
             }
 
             // 外键验证
-            if (reportTables.rpt) {
-                if (reportTables.rpt.id) {
-
-                    /**
-                     * TODO 更新报表编辑信息
-                      */
-                    reportTables.rpt.editorId = staffId
-                    reportTables.rpt.editorName = staffName
-                    reportTables.rpt.editTime = new Date()
-                    reportTables.save(flush: true)
-                    render Result.success() as JSON
-                    return
-                }
+            Report rpt = reportTables.rpt
+            if (!rpt || !(rpt.id)) {
+                render Result.error("报表不能为空") as JSON
+                return
             }
-            render Result.error("报表不能为空") as JSON
+
+            if (!reportTables.dataSource) {
+                render Result.error("数据源不能为空") as JSON
+                return
+            }
+
+            // 数据源编码
+//            String code = params."dataSource"
+//            if (!code) {
+//                render Result.error("数据源编码不能为空") as JSON
+//                return
+//            }
+//            // 数据源
+//            ReportDatasource dataSource = ReportDatasource.findByCode(code)
+//            if (!dataSource) {
+//                render Result.error("数据源编码有误") as JSON
+//                return
+//            }
+//            reportTables.dataSource = dataSource
+
+            reportTables.save(flush: true)
+            render Result.success() as JSON
             return
         }
         render Result.error("数据表不能为空") as JSON
@@ -91,14 +103,20 @@ class ReportTablesController {
                 }
             }
             if (reportTables) {
+                String dataSourceCode = params."dataSource"
+                params."dataSource" = null
                 reportTables.properties = params
 
-                /**
-                 * TODO 更新报表编辑信息
-                 */
-                reportTables.rpt.editorId = staffId
-                reportTables.rpt.editorName = staffName
-                reportTables.rpt.editTime = new Date()
+
+                if (dataSourceCode) {
+                    def reportDatasource = ReportDatasource.findByCode(dataSourceCode)
+                    if (!reportDatasource) {
+                        render Result.error("数据源编码有误") as JSON
+                        return
+                    }
+                    reportTables.dataSource = reportDatasource
+                }
+
                 if (reportTables.save(flush: true)) {
                     render Result.success() as JSON
                     return
@@ -131,12 +149,6 @@ class ReportTablesController {
                 }
             }
             if (reportTables) {
-                /**
-                 * TODO 更新报表编辑信息
-                 */
-                reportTables.rpt.editorId = staffId
-                reportTables.rpt.editorName = staffName
-                reportTables.rpt.editTime = new Date()
                 reportTables.delete(flush:true)
                 render Result.success() as JSON
                 return
@@ -162,11 +174,12 @@ class ReportTablesController {
                     eq("id", reportId)
                 }
                 order("seqNum", "asc")
-            }.each { tables ->
+            }.each { ReportTables tables ->
                 // 属性赋值
                 ReportTableVO vo = new ReportTableVO()
                 bindData(vo, tables)
-                vo.setRptId(tables.rpt.id)
+                vo.rptId = tables.rpt.id
+                vo.dataSource = tables.dataSource.code
                 reportTableVOList.add(vo)
             }
 
@@ -183,106 +196,106 @@ class ReportTablesController {
      * @param paramNameMap 已使用的参数
      * @return
      */
-    private XmlDataDTO getTableData(List<ReportTables> reportTablesList, List<ReportParamValue> usedParamList) {
-        if (!reportTablesList){
-            return null
-        }
-        // 所有涉及到的参数列表
-        Map<String, ReportParamValue> paramNameMap = new HashMap<>()
-        if (usedParamList) {
-            usedParamList.each { param ->
-                paramNameMap.put(param.name, param)
-            }
-        }
-        List<TableParamDTO> tableParamDTOList = new ArrayList<>()
-        reportTablesList.each { ReportTables table ->
-            String reportId = table.rpt.id
-            TableParamDTO tableParamDTO = new TableParamDTO()
-            tableParamDTO.reportTables = table
-
-            /** 解析查询语句中的参数 **/
-            // sql语句
-            String sql = table.sqlText
-
-            // 输入参数动态查询参数解析
-            List<String> paramList = CommonUtil.analysisSql(sql)
-
-            // 参数列表
-            List<String> paramValues = new ArrayList<>()
-
-            // 遍历参数
-            paramList.each { param ->
-                // 将sql中参数替换为？，变为可执行参数
-                sql = sql.replace(param, "?")
-                // 去掉[]，获取参数名称
-                String paramName = param[param.indexOf(CommonValue.PARAM_PREFIX) + 1..param.indexOf(CommonValue.PARAM_SUFFIX) - 1]
-
-                if (paramNameMap.containsKey(paramName)) {
-                    paramValues.add(paramNameMap.get(paramName).value)
-                    return
-                }
-
-                // 系统参数
-                ReportSystemParamEnum systemParamEnum = ReportSystemParamEnum.getEnumByName(paramName)
-                // 参数为系统参数
-                if (systemParamEnum) {
-                    // 取默认值
-                    ReportParamValue reportParamValue = CommonUtil.getSystemParamValue()
-                    if (!reportParamValue) {
-                        return
-                    }
-
-                    paramNameMap.put(paramName, reportParamValue)
-                    paramValues.add(reportParamValue.value)
-                } else {
-
-                    // 查询对应输入参数
-                    ReportInputs reportInputs = ReportInputs.createCriteria().get {
-                        and {
-                            rpt {
-                                eq("id", reportId)
-                            }
-                            eq("name", paramName)
-                        }
-                    }
-
-                    // 取默认值
-                    ReportParamValue reportParamValue = CommonUtil.getInputParamValue(QueryInputDefTypeEnum.getEnumByDefType(reportInputs.defType))
-                    if (!reportParamValue) {
-                        return
-                    }
-
-                    paramNameMap.put(paramName, reportParamValue)
-                    paramValues.add(reportParamValue.value)
-                }
-            }
-            /**
-             * TODO
-             */
-            // 查询结果
-            def url = grailsApplication.config.getProperty("select.dataSource.url")
-            def user = grailsApplication.config.getProperty("select.dataSource.user")
-            def pwd = grailsApplication.config.getProperty("select.dataSource.pwd")
-            def driverClassName = grailsApplication.config.getProperty("select.dataSource.driverClassName")
-            // 执行sql
-            Sql db = Sql.newInstance(url,
-                    user, pwd,
-                    driverClassName )
-            List rows = db.rows(sql, paramValues)
-
-            tableParamDTO.rowList = rows
-
-            tableParamDTOList.add(tableParamDTO)
-        }
-        // 参数列表
-        List<ReportParamValue> paramList = new ArrayList<>()
-        paramList.addAll(paramNameMap.values())
-
-        XmlDataDTO xmlData = new XmlDataDTO()
-        xmlData.paramValueList = paramList
-        xmlData.tableParamDTOList = tableParamDTOList
-        return xmlData
-    }
+//    private XmlDataDTO getTableData(List<ReportTables> reportTablesList, List<ReportParamValue> usedParamList) {
+//        if (!reportTablesList){
+//            return null
+//        }
+//        // 所有涉及到的参数列表
+//        Map<String, ReportParamValue> paramNameMap = new HashMap<>()
+//        if (usedParamList) {
+//            usedParamList.each { param ->
+//                paramNameMap.put(param.name, param)
+//            }
+//        }
+//        List<TableParamDTO> tableParamDTOList = new ArrayList<>()
+//        reportTablesList.each { ReportTables table ->
+//            String reportId = table.rpt.id
+//            TableParamDTO tableParamDTO = new TableParamDTO()
+//            tableParamDTO.reportTables = table
+//
+//            /** 解析查询语句中的参数 **/
+//            // sql语句
+//            String sql = table.sqlText
+//
+//            // 输入参数动态查询参数解析
+//            List<String> paramList = CommonUtil.analysisSql(sql)
+//
+//            // 参数列表
+//            List<String> paramValues = new ArrayList<>()
+//
+//            // 遍历参数
+//            paramList.each { param ->
+//                // 将sql中参数替换为？，变为可执行参数
+//                sql = sql.replace(param, "?")
+//                // 去掉[]，获取参数名称
+//                String paramName = param[param.indexOf(CommonValue.PARAM_PREFIX) + 1..param.indexOf(CommonValue.PARAM_SUFFIX) - 1]
+//
+//                if (paramNameMap.containsKey(paramName)) {
+//                    paramValues.add(paramNameMap.get(paramName).value)
+//                    return
+//                }
+//
+//                // 系统参数
+//                ReportSystemParamEnum systemParamEnum = ReportSystemParamEnum.getEnumByName(paramName)
+//                // 参数为系统参数
+//                if (systemParamEnum) {
+//                    // 取默认值
+//                    ReportParamValue reportParamValue = CommonUtil.getSystemParamValue()
+//                    if (!reportParamValue) {
+//                        return
+//                    }
+//
+//                    paramNameMap.put(paramName, reportParamValue)
+//                    paramValues.add(reportParamValue.value)
+//                } else {
+//
+//                    // 查询对应输入参数
+//                    ReportInputs reportInputs = ReportInputs.createCriteria().get {
+//                        and {
+//                            rpt {
+//                                eq("id", reportId)
+//                            }
+//                            eq("name", paramName)
+//                        }
+//                    }
+//
+//                    // 取默认值
+//                    ReportParamValue reportParamValue = CommonUtil.getInputParamValue(QueryInputDefTypeEnum.getEnumByDefType(reportInputs.defType))
+//                    if (!reportParamValue) {
+//                        return
+//                    }
+//
+//                    paramNameMap.put(paramName, reportParamValue)
+//                    paramValues.add(reportParamValue.value)
+//                }
+//            }
+//            /**
+//             * TODO
+//             */
+//            // 查询结果
+//            def url = grailsApplication.config.getProperty("select.dataSource.url")
+//            def user = grailsApplication.config.getProperty("select.dataSource.user")
+//            def pwd = grailsApplication.config.getProperty("select.dataSource.pwd")
+//            def driverClassName = grailsApplication.config.getProperty("select.dataSource.driverClassName")
+//            // 执行sql
+//            Sql db = Sql.newInstance(url,
+//                    user, pwd,
+//                    driverClassName )
+//            List rows = db.rows(sql, paramValues)
+//
+//            tableParamDTO.rowList = rows
+//
+//            tableParamDTOList.add(tableParamDTO)
+//        }
+//        // 参数列表
+//        List<ReportParamValue> paramList = new ArrayList<>()
+//        paramList.addAll(paramNameMap.values())
+//
+//        XmlDataDTO xmlData = new XmlDataDTO()
+//        xmlData.paramValueList = paramList
+//        xmlData.tableParamDTOList = tableParamDTOList
+//        return xmlData
+//    }
     public static void main(String[] args) {
         // 执行sql
 //        Sql db = Sql.newInstance("jdbc:mysql://rm-bp16c06lj5gooo69a3o.mysql.rds.aliyuncs.com/dev_region?createDatabaseIfNotExist=true&amp;useUnicode=true&amp;characterEncoding=utf-8",
@@ -298,6 +311,15 @@ class ReportTablesController {
 //            }
 //
 //        })
+        StringWriter out = new StringWriter()
+        def xml = new MarkupBuilder(out)
+        xml.mkp.xmlDeclaration(version: "1.0", encoding: "utf-8")
+        xml."report"(){
+            "var_set"() {
+                "var_name"("名称")
+            }
+        }
+        println out.toString()
     }
     /**
      * api获取指定报表的数据
@@ -617,7 +639,7 @@ class ReportTablesController {
             }
         }
         // 获取报表关联数据表详情
-        XmlDataDTO xmlDataDTO = getTableData(reportTablesList, useParamList)
+        XmlDataDTO xmlDataDTO = dataFacadeService.getTableData(reportTablesList, useParamList)
         // xml格式数据
         String xml = toXmlData(xmlDataDTO)
 
@@ -670,7 +692,6 @@ class ReportTablesController {
         }
         return null
     }
-
     /**
      * 转换为大屏所用的xml格式数据
      * @param xmlDataDTO
@@ -712,14 +733,5 @@ class ReportTablesController {
             return out.toString()
         }
         return null
-    }
-    protected void notFound() {
-        request.withFormat {
-            form multipartForm {
-                flash.message = message(code: 'default.not.found.message', args: [message(code: 'reportTables.label', default: 'ReportTables'), params.id])
-                redirect action: "index", method: "GET"
-            }
-            '*'{ render status: NOT_FOUND }
-        }
     }
 }

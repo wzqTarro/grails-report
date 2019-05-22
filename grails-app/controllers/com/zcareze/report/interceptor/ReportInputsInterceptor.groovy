@@ -1,5 +1,7 @@
 package com.zcareze.report.interceptor
 
+import com.zcareze.report.ReportDatasource
+
 /**
  * 输入参数拦截器
  */
@@ -12,6 +14,7 @@ class ReportInputsInterceptor {
     boolean before() {
         def rptId = params."rptId"
         params."rpt.id" = rptId
+        params."dataSource" = ReportDatasource.findByCode(params."dataSource")
         true
     }
 

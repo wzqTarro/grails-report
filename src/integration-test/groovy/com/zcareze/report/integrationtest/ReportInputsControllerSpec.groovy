@@ -2,6 +2,7 @@ package com.zcareze.report.integrationtest
 
 import com.report.common.CommonValue
 import com.zcareze.report.Report
+import com.zcareze.report.ReportDatasource
 import com.zcareze.report.ReportGrantTo
 import com.zcareze.report.ReportGroups
 import com.zcareze.report.ReportInputs
@@ -33,15 +34,17 @@ class ReportInputsControllerSpec extends Specification implements ControllerUnit
     }
 
     def setup(){
-        def group1 = new ReportGroups(code:"01", name:"运营简报", comment:"提现整体经营服务规模效果效益等内容的报表", color: "ffc100");
-        def group2 = new ReportGroups(code:"02", name:"服务管理", comment:"有关服务工作开展情况和开展内容等信息的呈现", color: "7BAFA1");
-        def group3 = new ReportGroups(code:"99", name:"监控大屏", comment:"内置专门存放监控大屏报表的分组", color: "b8e986");
+        def datasource = new ReportDatasource(code: "00", name: "中心数据源", config: '{"kind":1}')
+        datasource.save()
+        def group1 = new ReportGroups(code:"01", name:"运营简报", comment:"提现整体经营服务规模效果效益等内容的报表");
+        def group2 = new ReportGroups(code:"02", name:"服务管理", comment:"有关服务工作开展情况和开展内容等信息的呈现");
+        def group3 = new ReportGroups(code:"99", name:"监控大屏", comment:"内置专门存放监控大屏报表的分组");
         group1.save();
         group2.save();
         group3.save();
 
-        def report1 = new Report(code: "KZRZB", name: "科主任周报", grpCode: group1.code, runway: 1, editorName: "王", editorId: "1",);
-        def report2 = new Report(code: "JCYCD", name: "监测依从度统计", grpCode: group2.code, runway: 2, editorName: "王", editorId: "1");
+        def report1 = new Report(code: "KZRZB", name: "科主任周报", grpCode: group1.code, runway: 1);
+        def report2 = new Report(code: "JCYCD", name: "监测依从度统计", grpCode: group2.code, runway: 2);
         report1.save();
         report2.save(flush: true);
 
@@ -59,6 +62,7 @@ class ReportInputsControllerSpec extends Specification implements ControllerUnit
             ReportOpenTo.executeUpdate("delete ReportOpenTo")
             ReportInputs.executeUpdate("delete ReportInputs")
             ReportGroups.executeUpdate("delete ReportGroups")
+            ReportDatasource.executeUpdate("delete ReportDatasource")
             Report.executeUpdate("delete Report")
 
         }
@@ -66,8 +70,8 @@ class ReportInputsControllerSpec extends Specification implements ControllerUnit
     void "新增报表输入参数-测试1"() {
         given:"参数"
             Report report = Report.findByCode("JCYCD")
-            def editTime = report.editTime
-            ReportInputs reportInputs = new ReportInputs(rpt: report, name: "name", caption: "医生", seqNum: 2, dataType: "11", inputType: 1)
+            ReportDatasource datasource = ReportDatasource.findByCode("00")
+            ReportInputs reportInputs = new ReportInputs(rpt: report, name: "name", caption: "医生", seqNum: 2, dataType: "11", inputType: 1, dataSource: datasource)
         when:"执行"
             controller.addReportInput(reportInputs)
         then:"结果"
@@ -90,13 +94,13 @@ class ReportInputsControllerSpec extends Specification implements ControllerUnit
             assert actualInputs.seqNum == 2
             assert actualInputs.dataType == "11"
             assert actualInputs.inputType == 1
-            assert actualInputs.rpt.editTime.after(editTime)
     }
 
     void "新增报表输入参数-测试2"() {
         given:"参数"
         Report report = Report.findByCode("JCYCD")
-        ReportInputs reportInputs = new ReportInputs(rpt: report, name: "name", caption: "", seqNum: 2, dataType: "11", inputType: 1)
+        ReportDatasource datasource = ReportDatasource.findByCode("00")
+        ReportInputs reportInputs = new ReportInputs(rpt: report, name: "name", caption: "", seqNum: 2, dataType: "11", inputType: 1, dataSource: datasource)
         when:"执行"
         controller.addReportInput(reportInputs)
         then:"结果"
@@ -109,7 +113,8 @@ class ReportInputsControllerSpec extends Specification implements ControllerUnit
     void "新增报表输入参数-测试3"() {
         given:"参数"
         Report report = Report.findByCode("JCYCD")
-        ReportInputs reportInputs = new ReportInputs(rpt: report, name: "", caption: "医生", seqNum: 2, dataType: "11", inputType: 1)
+        ReportDatasource datasource = ReportDatasource.findByCode("00")
+        ReportInputs reportInputs = new ReportInputs(rpt: report, name: "", caption: "医生", seqNum: 2, dataType: "11", inputType: 1, dataSource: datasource)
         when:"执行"
         controller.addReportInput(reportInputs)
         then:"结果"
@@ -122,7 +127,8 @@ class ReportInputsControllerSpec extends Specification implements ControllerUnit
     void "新增报表输入参数-测试4"() {
         given:"参数"
         Report report = Report.findByCode("JCYCD")
-        ReportInputs reportInputs = new ReportInputs(rpt: report, name: "name", caption: "医生", seqNum: 2, dataType: "", inputType: 1)
+        ReportDatasource datasource = ReportDatasource.findByCode("00")
+        ReportInputs reportInputs = new ReportInputs(rpt: report, name: "name", caption: "医生", seqNum: 2, dataType: "", inputType: 1, dataSource: datasource)
         when:"执行"
         controller.addReportInput(reportInputs)
         then:"结果"
@@ -134,7 +140,8 @@ class ReportInputsControllerSpec extends Specification implements ControllerUnit
 
     void "新增报表输入参数-测试5"() {
         given:"参数"
-        ReportInputs reportInputs = new ReportInputs(rpt: null, name: "name", caption: "医生", seqNum: 2, dataType: "11", inputType: 1)
+        ReportDatasource datasource = ReportDatasource.findByCode("00")
+        ReportInputs reportInputs = new ReportInputs(rpt: null, name: "name", caption: "医生", seqNum: 2, dataType: "11", inputType: 1, dataSource: datasource)
         when:"执行"
         controller.addReportInput(reportInputs)
         then:"结果"
@@ -148,7 +155,8 @@ class ReportInputsControllerSpec extends Specification implements ControllerUnit
         given:"参数"
         Report report = Report.findByCode("JCYCD")
         report.id = null
-        ReportInputs reportInputs = new ReportInputs(rpt: report, name: "name", caption: "医生", seqNum: 2, dataType: "11", inputType: 1)
+        ReportDatasource datasource = ReportDatasource.findByCode("00")
+        ReportInputs reportInputs = new ReportInputs(rpt: report, name: "name", caption: "医生", seqNum: 2, dataType: "11", inputType: 1, dataSource: datasource)
         when:"执行"
         controller.addReportInput(reportInputs)
         then:"结果"
@@ -161,7 +169,8 @@ class ReportInputsControllerSpec extends Specification implements ControllerUnit
     void "新增报表输入参数-测试7"() {
         given:"参数"
         Report report = Report.findByCode("JCYCD")
-        ReportInputs reportInputs = new ReportInputs(rpt: report, name: "my_staff_id", caption: "医生", seqNum: 2, dataType: "11", inputType: 1)
+        ReportDatasource datasource = ReportDatasource.findByCode("00")
+        ReportInputs reportInputs = new ReportInputs(rpt: report, name: "my_staff_id", caption: "医生", seqNum: 2, dataType: "11", inputType: 1, dataSource: datasource)
         when:"执行"
         controller.addReportInput(reportInputs)
         then:"结果"
@@ -173,7 +182,8 @@ class ReportInputsControllerSpec extends Specification implements ControllerUnit
 
     void "新增报表输入参数-测试8"() {
         given:"参数"
-        ReportInputs reportInputs = new ReportInputs(rpt: new Report(), name: "name", caption: "医生", seqNum: 2, dataType: "11", inputType: 1)
+        ReportDatasource datasource = ReportDatasource.findByCode("00")
+        ReportInputs reportInputs = new ReportInputs(rpt: new Report(), name: "name", caption: "医生", seqNum: 2, dataType: "11", inputType: 1, dataSource: datasource)
         when:"执行"
         controller.addReportInput(reportInputs)
         then:"结果"
@@ -186,7 +196,8 @@ class ReportInputsControllerSpec extends Specification implements ControllerUnit
     void "新增报表输入参数-测试9"() {
         given:"参数"
         Report report = Report.findByCode("JCYCD")
-        ReportInputs reportInputs = new ReportInputs(rpt: report, name: "endtime", caption: "结束时间", seqNum: 2, dataType: "11", inputType: 1)
+        ReportDatasource datasource = ReportDatasource.findByCode("00")
+        ReportInputs reportInputs = new ReportInputs(rpt: report, name: "endtime", caption: "结束时间", seqNum: 2, dataType: "11", inputType: 1, dataSource: datasource)
         when:"执行"
         controller.addReportInput(reportInputs)
         then:"结果"
@@ -194,6 +205,19 @@ class ReportInputsControllerSpec extends Specification implements ControllerUnit
         def jsonData = response.json
         assert jsonData.code == 3
         assert jsonData.message == "[报表输入参数]类的属性[name]的值[endtime]必须是唯一的;"
+    }
+
+    void "新增报表输入参数-测试10"() {
+        given:"参数"
+        Report report = Report.findByCode("JCYCD")
+        ReportInputs reportInputs = new ReportInputs(rpt: report, name: "endtime1", caption: "结束时间", seqNum: 2, dataType: "11", inputType: 1)
+        when:"执行"
+        controller.addReportInput(reportInputs)
+        then:"结果"
+        assert response.status == 200
+        def jsonData = response.json
+        assert jsonData.code == 3
+        assert jsonData.message == "数据源不能为空"
     }
 
     void accessParams(params, param) {
@@ -204,11 +228,11 @@ class ReportInputsControllerSpec extends Specification implements ControllerUnit
         params["dataType"]=param.dataType
         params["inputType"]=param.inputType
         params["defType"]=param.defType
+        params["dataSource"]=param.dataSource
     }
     void "修改报表输入参数-测试1"() {
         given:"参数"
             Report report = Report.findByCode("JCYCD")
-            def editTime = report.editTime
             def rptId = report.id
             def name = "endtime"
             def param = [rptId: rptId, name: name, caption: "结束时间", seqNum: 3, dataType: "23", inputType: 1, defType: "今天" ]
@@ -236,7 +260,6 @@ class ReportInputsControllerSpec extends Specification implements ControllerUnit
             assert actualInputs.dataType == "23"
             assert actualInputs.inputType == 1
             assert actualInputs.defType == "今天"
-            assert actualInputs.rpt.editTime.after(editTime)
     }
 
     void "修改报表输入参数-测试2"() {
@@ -273,7 +296,6 @@ class ReportInputsControllerSpec extends Specification implements ControllerUnit
     void "修改报表输入参数-测试4"() {
         given:"参数"
         Report report = Report.findByCode("JCYCD")
-        def editTime = report.editTime
         def rptId = report.id
         def name = "endtime"
         def param = [rptId: rptId, name: name, caption: "结束", seqNum: 2, dataType: "23", inputType: 2, defType: "今" ]
@@ -301,7 +323,6 @@ class ReportInputsControllerSpec extends Specification implements ControllerUnit
         assert actualInputs.dataType == "23"
         assert actualInputs.inputType == 2
         assert actualInputs.defType == "今"
-        assert actualInputs.rpt.editTime.after(editTime)
     }
 
     void "修改报表输入参数-测试5"() {
@@ -368,10 +389,25 @@ class ReportInputsControllerSpec extends Specification implements ControllerUnit
         assert jsonData.message == "[报表输入参数]类的属性[inputType]的值[4]不在列表的取值范围内;"
     }
 
+    void "修改报表输入参数-测试9"() {
+        given:"参数"
+        Report report = Report.findByCode("JCYCD")
+        def rptId = report.id
+        def name = "endtime"
+        def param = [rptId: rptId, name: name, caption: "结束时间", seqNum: 3, dataType: "23", inputType: 3, defType: "今天", dataSource: "01"]
+        when:"执行"
+        accessParams(controller.params, param)
+        controller.editReportInput()
+        then:"结果"
+        assert response.status == 200
+        def jsonData = response.json
+        assert jsonData.code == 3
+        assert jsonData.message == "数据源有误"
+    }
+
     void "删除报表输入参数-测试1"() {
         given:"参数"
         Report report = Report.findByCode("JCYCD")
-        def editTime = report.editTime
         def rptId = report.id
         def name = "endtime"
         when:"执行"
@@ -383,7 +419,6 @@ class ReportInputsControllerSpec extends Specification implements ControllerUnit
         assert jsonData.message == "执行成功"
         when:"验证"
         Report actualReport = Report.findByCode("JCYCD")
-        def actualEditTime = actualReport.editTime
         ReportInputs actualInputs = ReportInputs.createCriteria().get {
             and{
                 rpt{
@@ -394,13 +429,11 @@ class ReportInputsControllerSpec extends Specification implements ControllerUnit
         }
         then:"验证结果"
         assert actualInputs == null
-        assert actualEditTime.after(editTime)
     }
 
     void "删除报表输入参数-测试2"() {
         given:"参数"
         Report report = Report.findByCode("JCYCD")
-        def editTime = report.editTime
         def rptId = report.id
         def name = "end"
         when:"执行"
@@ -415,7 +448,6 @@ class ReportInputsControllerSpec extends Specification implements ControllerUnit
     void "删除报表输入参数-测试3"() {
         given:"参数"
         Report report = Report.findByCode("JCYCD")
-        def editTime = report.editTime
         def rptId = ""
         def name = ""
         when:"执行"
@@ -430,7 +462,6 @@ class ReportInputsControllerSpec extends Specification implements ControllerUnit
     void "删除报表输入参数-测试4"() {
         given:"参数"
         Report report = Report.findByCode("JCYCD")
-        def editTime = report.editTime
         def rptId = null
         def name = null
         when:"执行"

@@ -20,9 +20,9 @@ import spock.lang.Specification
 //@Ignore
 class ReportGroupsControllerSpec extends Specification implements ControllerUnitTest<ReportGroupsController>{
     def setup(){
-        def group2 = new ReportGroups(code:"02", name:"服务管理", comment:"有关服务工作开展情况和开展内容等信息的呈现", color: "7BAFA1");
-        def group1 = new ReportGroups(code:"03", name:"药品管理", comment:"有关药品等信息的呈现", color: "6ABFA1");
-        def group3 = new ReportGroups(code:"99", name:"监控大屏", comment:"内置专门存放监控大屏报表的分组", color: "b8e986");
+        def group2 = new ReportGroups(code:"02", name:"服务管理", comment:"有关服务工作开展情况和开展内容等信息的呈现");
+        def group1 = new ReportGroups(code:"03", name:"药品管理", comment:"有关药品等信息的呈现");
+        def group3 = new ReportGroups(code:"99", name:"监控大屏", comment:"内置专门存放监控大屏报表的分组");
         group1.save()
         group2.save();
         group3.save(flush: true);
@@ -42,7 +42,7 @@ class ReportGroupsControllerSpec extends Specification implements ControllerUnit
 
     void "添加报表分组-测试1"() {
         given:"参数"
-            def group = new ReportGroups(code:"01", name:"运营简报", comment:"提现整体经营服务规模效果效益等内容的报表", color: "ffc100");
+            def group = new ReportGroups(code:"01", name:"运营简报", comment:"提现整体经营服务规模效果效益等内容的报表");
         when:"执行方法"
             controller.addReportGroup(group)
         then:"结果"
@@ -58,12 +58,11 @@ class ReportGroupsControllerSpec extends Specification implements ControllerUnit
             assert testReportGroups.code == "01"
             assert testReportGroups.name == "运营简报"
             assert testReportGroups.comment == "提现整体经营服务规模效果效益等内容的报表"
-            assert testReportGroups.color == "ffc100"
     }
 
     void "添加报表分组-测试2"() {
         given:"参数"
-            def group = new ReportGroups(code:"", name:"运营简报", comment:"提现整体经营服务规模效果效益等内容的报表", color: "ffc100");
+            def group = new ReportGroups(code:"", name:"运营简报", comment:"提现整体经营服务规模效果效益等内容的报表");
         when:"执行方法"
             controller.addReportGroup(group)
         then:"结果"
@@ -76,7 +75,7 @@ class ReportGroupsControllerSpec extends Specification implements ControllerUnit
 
     void "添加报表分组-测试3"() {
         given:"参数"
-            def group = new ReportGroups(code:"01", name:"", comment:"提现整体经营服务规模效果效益等内容的报表", color: "ffc100");
+            def group = new ReportGroups(code:"01", name:"", comment:"提现整体经营服务规模效果效益等内容的报表");
         when:"执行方法"
             controller.addReportGroup(group)
         then:"结果"
@@ -89,7 +88,7 @@ class ReportGroupsControllerSpec extends Specification implements ControllerUnit
 
     void "添加报表分组-测试4"() {
         given:"参数"
-            def group = new ReportGroups(code:"01", name:"服务管理", comment:"提现整体经营服务规模效果效益等内容的报表", color: "ffc100");
+            def group = new ReportGroups(code:"01", name:"服务管理", comment:"提现整体经营服务规模效果效益等内容的报表");
         when:"执行方法"
             controller.addReportGroup(group)
         then:"结果"
@@ -102,7 +101,7 @@ class ReportGroupsControllerSpec extends Specification implements ControllerUnit
 
     void "添加报表分组-测试5"() {
         given:"参数"
-            def group = new ReportGroups(code:"02", name:"运营简报", comment:"提现整体经营服务规模效果效益等内容的报表", color: "ffc100");
+            def group = new ReportGroups(code:"02", name:"运营简报", comment:"提现整体经营服务规模效果效益等内容的报表");
         when:"执行方法"
             controller.addReportGroup(group)
         then:"结果"
@@ -117,12 +116,11 @@ class ReportGroupsControllerSpec extends Specification implements ControllerUnit
         params["code"] = param.code
         params["name"] = param.name
         params["comment"] = param.comment
-        params["color"] = param.color
     }
 
     void "编辑报表分组-测试1"() {
         given:"参数"
-            def param = [code:"02", name:"运营简报", comment:"提现整体经营服务规模效果效益等内容的报表", color: "ffc100"];
+            def param = [code:"02", name:"运营简报", comment:"提现整体经营服务规模效果效益等内容的报表"];
             accessParams(controller.params, param)
         when:"执行方法"
             controller.editReportGroup()
@@ -139,12 +137,11 @@ class ReportGroupsControllerSpec extends Specification implements ControllerUnit
             assert actualGroups.code == "02"
             assert actualGroups.name == "运营简报"
             assert actualGroups.comment == "提现整体经营服务规模效果效益等内容的报表"
-            assert actualGroups.color == "ffc100"
     }
 
     void "编辑报表分组-测试2"() {
         given:"参数"
-            def param = [code:"02", name:"运营简", comment:"提现整体经营服务规模效果效益等内容的报", color: "ffc10"];
+            def param = [code:"02", name:"运营简", comment:"提现整体经营服务规模效果效益等内容的报"];
             accessParams(controller.params, param)
         when:"执行方法"
             controller.editReportGroup()
@@ -161,12 +158,11 @@ class ReportGroupsControllerSpec extends Specification implements ControllerUnit
             assert actualGroups.code == "02"
             assert actualGroups.name == "运营简"
             assert actualGroups.comment == "提现整体经营服务规模效果效益等内容的报"
-            assert actualGroups.color == "ffc10"
     }
 
     void "编辑报表分组-测试3"() {
         given:"参数"
-            def param = [code:"", name:"服务管理", comment:"提现整体经营服务规模效果效益等内容的报", color: "ffc10"];
+            def param = [code:"", name:"服务管理", comment:"提现整体经营服务规模效果效益等内容的报"];
             accessParams(controller.params, param)
         when:"执行方法"
             controller.editReportGroup()
@@ -180,7 +176,7 @@ class ReportGroupsControllerSpec extends Specification implements ControllerUnit
 
     void "编辑报表分组-测试4"() {
         given:"参数"
-            def param = [code:"02", name:"", comment:"提现整体经营服务规模效果效益等内容的报", color: "ffc10"];
+            def param = [code:"02", name:"", comment:"提现整体经营服务规模效果效益等内容的报"];
             accessParams(controller.params, param)
         when:"执行方法"
             controller.editReportGroup()
@@ -298,7 +294,194 @@ class ReportGroupsControllerSpec extends Specification implements ControllerUnit
             def data = list.get(0)
             assert data.code == "02"
             assert data.name == "服务管理"
-            assert data.color == "7BAFA1"
             assert data.comment == "有关服务工作开展情况和开展内容等信息的呈现"
+    }
+
+    void "根据名称或编码查询报表分组列表-测试1"() {
+        given:"参数"
+            String name = ""
+            String code = ""
+            Integer pageNow = null
+            Integer pageSize = null
+        when:"执行"
+            controller.getByCondition(name, code, pageNow, pageSize)
+        then:"结果"
+            assert response.status == 200
+            assert response.getHeader("Content-Type") == "application/json;charset=UTF-8"
+            def jsonData = response.json
+            assert jsonData
+            assert jsonData.code == 1
+
+            def list = jsonData.list
+            assert list?.size() == 3
+
+            def data = list.get(0)
+            assert data.code == "02"
+            assert data.name == "服务管理"
+            assert data.comment == "有关服务工作开展情况和开展内容等信息的呈现"
+
+            def data1 = list.get(1)
+            assert data1.code == "03"
+            assert data1.name == "药品管理"
+            assert data1.comment == "有关药品等信息的呈现"
+
+            def data2 = list.get(2)
+            assert data2.code == "99"
+            assert data2.name == "监控大屏"
+            assert data2.comment == "内置专门存放监控大屏报表的分组"
+    }
+
+    void "根据名称或编码查询报表分组列表-测试2"() {
+        given:"参数"
+        String name = "服务管理"
+        String code = ""
+        Integer pageNow = null
+        Integer pageSize = null
+        when:"执行"
+        controller.getByCondition(name, code, pageNow, pageSize)
+        then:"结果"
+        assert response.status == 200
+        assert response.getHeader("Content-Type") == "application/json;charset=UTF-8"
+        def jsonData = response.json
+        assert jsonData
+        assert jsonData.code == 1
+
+        def list = jsonData.list
+        assert list?.size() == 1
+
+        def data = list.get(0)
+        assert data.code == "02"
+        assert data.name == "服务管理"
+        assert data.comment == "有关服务工作开展情况和开展内容等信息的呈现"
+    }
+
+    void "根据名称或编码查询报表分组列表-测试3"() {
+        given:"参数"
+        String name = ""
+        String code = "03"
+        Integer pageNow = null
+        Integer pageSize = null
+        when:"执行"
+        controller.getByCondition(name, code, pageNow, pageSize)
+        then:"结果"
+        assert response.status == 200
+        assert response.getHeader("Content-Type") == "application/json;charset=UTF-8"
+        def jsonData = response.json
+        assert jsonData
+        assert jsonData.code == 1
+
+        def list = jsonData.list
+        assert list?.size() == 1
+
+        def data1 = list.get(0)
+        assert data1.code == "03"
+        assert data1.name == "药品管理"
+        assert data1.comment == "有关药品等信息的呈现"
+    }
+
+    void "根据名称或编码查询报表分组列表-测试4"() {
+        given:"参数"
+        String name = ""
+        String code = ""
+        Integer pageNow = 0
+        Integer pageSize = null
+        when:"执行"
+        controller.getByCondition(name, code, pageNow, pageSize)
+        then:"结果"
+        assert response.status == 200
+        assert response.getHeader("Content-Type") == "application/json;charset=UTF-8"
+        def jsonData = response.json
+        assert jsonData
+        assert jsonData.code == 1
+
+        def list = jsonData.list
+        assert list?.size() == 3
+
+        def data = list.get(0)
+        assert data.code == "02"
+        assert data.name == "服务管理"
+        assert data.comment == "有关服务工作开展情况和开展内容等信息的呈现"
+
+        def data1 = list.get(1)
+        assert data1.code == "03"
+        assert data1.name == "药品管理"
+        assert data1.comment == "有关药品等信息的呈现"
+
+        def data2 = list.get(2)
+        assert data2.code == "99"
+        assert data2.name == "监控大屏"
+        assert data2.comment == "内置专门存放监控大屏报表的分组"
+    }
+
+    void "根据名称或编码查询报表分组列表-测试5"() {
+        given:"参数"
+        String name = ""
+        String code = ""
+        Integer pageNow = 0
+        Integer pageSize = 2
+        when:"执行"
+        controller.getByCondition(name, code, pageNow, pageSize)
+        then:"结果"
+        assert response.status == 200
+        assert response.getHeader("Content-Type") == "application/json;charset=UTF-8"
+        def jsonData = response.json
+        assert jsonData
+        assert jsonData.code == 1
+
+        def list = jsonData.list
+        assert list?.size() == 2
+
+        def data = list.get(0)
+        assert data.code == "02"
+        assert data.name == "服务管理"
+        assert data.comment == "有关服务工作开展情况和开展内容等信息的呈现"
+
+        def data1 = list.get(1)
+        assert data1.code == "03"
+        assert data1.name == "药品管理"
+        assert data1.comment == "有关药品等信息的呈现"
+    }
+
+    void "根据名称或编码查询报表分组列表-测试6"() {
+        given:"参数"
+        String name = "药品"
+        String code = "03"
+        Integer pageNow = 0
+        Integer pageSize = 2
+        when:"执行"
+        controller.getByCondition(name, code, pageNow, pageSize)
+        then:"结果"
+        assert response.status == 200
+        assert response.getHeader("Content-Type") == "application/json;charset=UTF-8"
+        def jsonData = response.json
+        assert jsonData
+        assert jsonData.code == 1
+
+        def list = jsonData.list
+        assert list?.size() == 1
+
+        def data1 = list.get(0)
+        assert data1.code == "03"
+        assert data1.name == "药品管理"
+        assert data1.comment == "有关药品等信息的呈现"
+    }
+
+    void "根据名称或编码查询报表分组列表-测试7"() {
+        given:"参数"
+        String name = "03"
+        String code = "03"
+        Integer pageNow = 0
+        Integer pageSize = 1
+        when:"执行"
+        controller.getByCondition(name, code, pageNow, pageSize)
+        then:"结果"
+        assert response.status == 200
+        assert response.getHeader("Content-Type") == "application/json;charset=UTF-8"
+        def jsonData = response.json
+        assert jsonData
+        assert jsonData.code == 1
+
+        def list = jsonData.list
+        assert list?.size() == 0
     }
 }

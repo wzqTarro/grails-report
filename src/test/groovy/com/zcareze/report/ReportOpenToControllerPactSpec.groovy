@@ -17,11 +17,11 @@ import spock.lang.Specification
 //@Ignore
 class ReportOpenToControllerPactSpec extends Specification implements ControllerUnitTest<ReportOpenToController> {
     def setup() {
-        def group1 = new ReportGroups(code:"01", name:"运营简报", comment:"提现整体经营服务规模效果效益等内容的报表", color: "ffc100");
+        def group1 = new ReportGroups(code:"01", name:"运营简报", comment:"提现整体经营服务规模效果效益等内容的报表");
         group1.save();
         
         // 报表
-        def report5 = new Report(code: "YPFX", name: "药品分析", grpCode: group1.code, runway: 1, editorName: "王", editorId: "1")
+        def report5 = new Report(code: "YPFX", name: "药品分析", grpCode: group1.code, runway: 1)
         report5.save(flush:true)
 
         new ReportOpenTo(rpt: report5, orgTreeId: "1", orgTreeLayer: 0, roles: "02;11", granter: "王").save()
